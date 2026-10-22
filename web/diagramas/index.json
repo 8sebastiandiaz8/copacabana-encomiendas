@@ -1,0 +1,37 @@
+[
+  {
+    "slug": "01-arbol-problemas",
+    "name": "Árbol de problemas",
+    "caption": "Hipótesis causales de la propuesta. Los efectos deben contrastarse con usuarios."
+  },
+  {
+    "slug": "02-contexto",
+    "name": "Diagrama de contexto",
+    "caption": "El cliente interactúa a través del personal. Los dispositivos GPS aportan coordenadas con autenticación propia."
+  },
+  {
+    "slug": "03-flujo-datos",
+    "name": "Flujo de datos de nivel 1",
+    "caption": "Procesos del sistema y almacenes de datos. Las entradas y consultas se especifican en las flechas y en el estudio."
+  },
+  {
+    "slug": "04-casos-uso",
+    "name": "Casos de uso",
+    "caption": "Permisos de operación, administración y telemetría. El operador solo modifica sus propios envíos."
+  },
+  {
+    "slug": "05-clases",
+    "name": "Modelo de clases",
+    "caption": "Modelo conceptual del núcleo y la telemetría. Las entidades se persisten como registros SQLite."
+  },
+  {
+    "slug": "06-secuencia",
+    "name": "Secuencia de registro",
+    "caption": "Registro transaccional de una encomienda. El fracaso de validación no crea registros parciales."
+  },
+  {
+    "slug": "07-estados",
+    "name": "Estados de una encomienda",
+    "caption": "No se admiten saltos ni regresiones. Las incidencias abiertas impiden completar la entrega."
+  }
+]

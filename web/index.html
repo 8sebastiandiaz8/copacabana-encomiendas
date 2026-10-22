@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#163f75">
+  <meta name="description" content="Copacabana: sistema de gestión de encomiendas y proyecto de Análisis y Diseño de Sistemas. Bolivia, 2026.">
+  <title>Copacabana · Un destino para cada envío</title>
+  <link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/vendor/leaflet.css">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script type="module" src="assets/landing-map.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+  <header class="site-header">
+    <a class="brand" href="./"><img src="assets/mark.svg" width="40" height="40" alt=""><span>copacabana<small>Encomiendas · Bolivia</small></span></a>
+    <nav aria-label="Navegación principal"><a class="active" href="./" aria-current="page">El proyecto</a><a href="documentacion.html">Documentación</a><a class="button small" href="sistema.html">Abrir sistema <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main id="contenido">
+    <section class="hero page-width">
+      <div class="hero-copy">
+        <span class="course-label"><span class="live-dot"></span> Análisis y Diseño de Sistemas · 2026</span>
+        <h1>Cada encomienda<br>tiene un camino.<br>Hagámoslo visible.</h1>
+        <p>Desde el primer registro hasta la última entrega. Una propuesta para conectar las operaciones de una agencia de encomiendas en Bolivia.</p>
+        <div class="hero-actions"><a class="button accent" href="sistema.html">Explorar el sistema <span aria-hidden="true">↗</span></a><a class="text-link" href="documentacion.html">Conocer el estudio</a></div>
+        <div class="hero-caption"><span class="mini-package" aria-hidden="true">◇</span><span>Proyecto académico con demostración interactiva.<br>Los datos de ejemplo son ficticios.</span></div>
+      </div>
+      <div class="route-board geographic-board">
+        <div class="board-top"><span>Cinco ciudades conectadas</span><a class="board-tag" href="sistema.html#mapa">Abrir mapa y GPS ↗</a></div>
+        <div id="landing-map" class="landing-map" aria-label="Mapa geográfico interactivo de la red de sucursales"></div>
+        <div class="map-preview-footer"><span class="live-dot"></span><span id="landing-map-status">Cargando la red de ciudades…</span></div>
+        <p class="map-footnote">Ubicaciones de referencia de cada ciudad. Consulta posiciones GPS recibidas en el sistema.</p>
+      </div>
+    </section>
+    <section class="project-strip">
+      <div class="page-width strip-grid"><div><strong>El punto de partida</strong><p>Un beta en PHP y MySQL.</p></div><span aria-hidden="true">→</span><div><strong>La propuesta</strong><p>Una experiencia web con Python.</p></div><span aria-hidden="true">→</span><div><strong>El objetivo</strong><p>Trazabilidad en cada entrega.</p></div></div>
+    </section>
+    <section class="page-width study-section">
+      <div class="section-intro"><span class="section-kicker">Del problema a la solución</span><h2>Un sistema que también<br>explica sus decisiones.</h2><p>La implementación acompaña un estudio con dos perspectivas: análisis estructurado y diseño orientado a objetos.</p><a class="text-link" href="documentacion.html">Leer la documentación completa ↗</a></div>
+      <div class="chapter-list">
+        <a href="documentacion.html#generalidades"><span class="chapter-number">I</span><div><h3>Generalidades y marco teórico</h3><p>Contexto, problema, objetivos, método y planificación.</p></div><span aria-hidden="true">↗</span></a>
+        <a href="documentacion.html#estructurado"><span class="chapter-number">II</span><div><h3>Análisis y diseño estructurado</h3><p>Flujos de datos, procesos y modelo de información.</p></div><span aria-hidden="true">↗</span></a>
+        <a href="documentacion.html#objetos"><span class="chapter-number">III</span><div><h3>Análisis y diseño orientado a objetos</h3><p>Casos de uso, clases y comportamiento con UML.</p></div><span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+    <section class="page-width capabilities">
+      <div><span class="feature-icon" aria-hidden="true">↗</span><h3>De origen a destino</h3><p>Registra encomiendas y consulta cada cambio en su recorrido.</p></div>
+      <div><span class="feature-icon" aria-hidden="true">⌘</span><h3>Una operación conectada</h3><p>Organiza sucursales, empresas, vehículos y personal.</p></div>
+      <div><span class="feature-icon" aria-hidden="true">✓</span><h3>Responsabilidad visible</h3><p>Gestiona incidencias y revisa quién realizó cada operación.</p></div>
+    </section>
+    <section class="page-width timeline-section"><div><span class="section-kicker">Publicación incremental</span><h2>Una entrega, varios avances.</h2><p>Hitos establecidos en la guía de la asignatura.</p></div><div class="milestone"><time datetime="2026-10-29">27–29 oct.</time><strong>Sitio y contenido inicial</strong><span>Problema, alcance y primera versión navegable.</span></div><div class="milestone"><time datetime="2026-12-08">08 dic.</time><strong>Entrega y defensa</strong><span>URL final, documento impreso y presentación.</span></div></section>
+  </main>
+  <footer class="site-footer page-width"><a class="brand compact" href="./"><img src="assets/mark.svg" width="30" height="30" alt=""><span>copacabana</span></a><span>Proyecto académico · La Paz, Bolivia · 2026</span><a href="documentacion.html#alcance">Alcance y limitaciones</a></footer>
+</body>
+</html>

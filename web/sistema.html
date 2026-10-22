@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#163f75">
+  <title>Sistema de encomiendas · Copacabana</title>
+  <link rel="icon" href="assets/mark.svg"><link rel="stylesheet" href="assets/vendor/leaflet.css"><link rel="stylesheet" href="assets/styles.css">
+  <script type="module" src="assets/app.js"></script>
+</head>
+<body class="app-body">
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+  <aside class="sidebar">
+    <a class="brand" href="./"><img src="assets/mark.svg" width="39" height="39" alt=""><span>copacabana<small>Centro de operaciones</small></span></a>
+    <div class="sidebar-label">Operación</div>
+    <nav id="app-nav" aria-label="Secciones del sistema">
+      <a href="#resumen" data-view="resumen"><span aria-hidden="true">▦</span> Resumen</a>
+      <a href="#encomiendas" data-view="encomiendas"><span aria-hidden="true">◇</span> Encomiendas</a>
+      <a href="#seguimiento" data-view="seguimiento"><span aria-hidden="true">⌕</span> Seguimiento</a>
+      <a href="#mapa" data-view="mapa"><span aria-hidden="true">◎</span> Mapa y GPS</a>
+      <a href="#incidencias" data-view="incidencias"><span aria-hidden="true">⚑</span> Incidencias</a>
+      <span class="sidebar-label">Administración</span>
+      <a href="#sucursales" data-view="sucursales"><span aria-hidden="true">⌂</span> Sucursales</a>
+      <a href="#empresas" data-view="empresas"><span aria-hidden="true">▤</span> Empresas</a>
+      <a href="#flota" data-view="flota"><span aria-hidden="true">▱</span> Flota</a>
+      <a href="#personal" data-view="personal"><span aria-hidden="true">♧</span> Personal</a>
+      <a href="#auditoria" data-view="auditoria" id="audit-nav"><span aria-hidden="true">☷</span> Auditoría</a>
+    </nav>
+    <div class="sidebar-bottom"><a href="documentacion.html">Documentación del proyecto ↗</a><a href="./">Volver al proyecto</a></div>
+  </aside>
+  <div class="app-shell">
+    <header class="app-topbar"><span>Agencia de encomiendas <b>/</b> <strong id="breadcrumb">Resumen</strong></span><div class="account"><span class="avatar" aria-hidden="true">CP</span><div><strong id="session-username">Cargando…</strong><small id="userrole"></small></div><button class="icon-button" id="session-action" title="Cambiar sesión" aria-label="Cambiar sesión">↪</button></div></header>
+    <div class="mode-banner" id="mode-banner" hidden></div>
+    <main id="contenido" class="app-main" tabindex="-1"><div class="loading">Preparando el centro de operaciones…</div></main>
+    <footer class="app-footer"><span>Copacabana · Proyecto académico 2026</span><span id="storage-label">Gestión de encomiendas</span></footer>
+  </div>
+  <dialog id="modal" aria-labelledby="modal-title"><div class="modal-header"><div><span class="section-kicker">Copacabana</span><h2 id="modal-title"></h2></div><button class="icon-button" id="close-modal" aria-label="Cerrar diálogo">✕</button></div><div id="modal-content"></div></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><p class="notice">Activa JavaScript para utilizar el sistema. La documentación se puede leer sin JavaScript.</p></noscript>
+</body>
+</html>

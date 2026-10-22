@@ -1,0 +1,561 @@
+{
+  "branches": [
+    {
+      "id": 1,
+      "name": "Central La Paz",
+      "city": "La Paz",
+      "address": "Dirección de ejemplo · La Paz"
+    },
+    {
+      "id": 2,
+      "name": "Sucursal Cochabamba",
+      "city": "Cochabamba",
+      "address": "Dirección de ejemplo · Cochabamba"
+    },
+    {
+      "id": 3,
+      "name": "Sucursal Santa Cruz",
+      "city": "Santa Cruz",
+      "address": "Dirección de ejemplo · Santa Cruz"
+    },
+    {
+      "id": 4,
+      "name": "Sucursal Oruro",
+      "city": "Oruro",
+      "address": "Dirección de ejemplo · Oruro"
+    },
+    {
+      "id": 5,
+      "name": "Sucursal Tarija",
+      "city": "Tarija",
+      "address": "Dirección de ejemplo · Tarija"
+    }
+  ],
+  "companies": [
+    {
+      "id": 1,
+      "name": "Comercial Andina (demo)",
+      "nit": "DEMO-1001",
+      "phone": "00000001"
+    },
+    {
+      "id": 2,
+      "name": "Textiles del Sur (demo)",
+      "nit": "DEMO-1002",
+      "phone": "00000002"
+    }
+  ],
+  "vehicles": [
+    {
+      "id": 1,
+      "plate": "DEMO-101",
+      "type": "Camión de carga",
+      "capacity": 5000
+    },
+    {
+      "id": 2,
+      "plate": "DEMO-202",
+      "type": "Furgón",
+      "capacity": 1500
+    },
+    {
+      "id": 3,
+      "plate": "DEMO-303",
+      "type": "Camioneta",
+      "capacity": 800
+    }
+  ],
+  "employees": [
+    {
+      "id": 1,
+      "name": "Encargado Central (demo)",
+      "position": "Gerencia",
+      "branch_id": 1,
+      "salary_cents": 500000
+    },
+    {
+      "id": 2,
+      "name": "Operador Regional (demo)",
+      "position": "Recepción",
+      "branch_id": 2,
+      "salary_cents": 350000
+    },
+    {
+      "id": 3,
+      "name": "Responsable Logística (demo)",
+      "position": "Despacho",
+      "branch_id": 3,
+      "salary_cents": 380000
+    }
+  ],
+  "shipments": [
+    {
+      "id": "CP-2026-1048",
+      "origin": 1,
+      "destination": 3,
+      "vehicle_id": 1,
+      "company_id": 1,
+      "sender": "Remitente de ejemplo 1",
+      "recipient": "Destinatario de ejemplo 1",
+      "description": "Repuestos de maquinaria",
+      "weight": 12.5,
+      "price_cents": 6500,
+      "status": "En tránsito",
+      "created_by": "Gerencia demo",
+      "created_at": "2026-10-20T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-20T13:00:00.000Z",
+          "actor": "Gerencia demo"
+        },
+        {
+          "status": "En tránsito",
+          "created_at": "2026-10-20T14:00:00.000Z",
+          "actor": "Gerencia demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1047",
+      "origin": 2,
+      "destination": 4,
+      "vehicle_id": 2,
+      "company_id": null,
+      "sender": "Remitente de ejemplo 2",
+      "recipient": "Destinatario de ejemplo 2",
+      "description": "Textiles y prendas",
+      "weight": 4.2,
+      "price_cents": 3180,
+      "status": "Registrado",
+      "created_by": "Operador demo",
+      "created_at": "2026-10-19T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-19T13:00:00.000Z",
+          "actor": "Operador demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1046",
+      "origin": 3,
+      "destination": 5,
+      "vehicle_id": 3,
+      "company_id": null,
+      "sender": "Remitente de ejemplo 3",
+      "recipient": "Destinatario de ejemplo 3",
+      "description": "Material de oficina",
+      "weight": 8,
+      "price_cents": 4700,
+      "status": "En destino",
+      "created_by": "Gerencia demo",
+      "created_at": "2026-10-18T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-18T13:00:00.000Z",
+          "actor": "Gerencia demo"
+        },
+        {
+          "status": "En tránsito",
+          "created_at": "2026-10-18T14:00:00.000Z",
+          "actor": "Gerencia demo"
+        },
+        {
+          "status": "En destino",
+          "created_at": "2026-10-18T15:00:00.000Z",
+          "actor": "Gerencia demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1045",
+      "origin": 4,
+      "destination": 1,
+      "vehicle_id": 1,
+      "company_id": 1,
+      "sender": "Remitente de ejemplo 4",
+      "recipient": "Destinatario de ejemplo 4",
+      "description": "Accesorios electrónicos",
+      "weight": 2.5,
+      "price_cents": 2500,
+      "status": "Entregado",
+      "created_by": "Operador demo",
+      "created_at": "2026-10-17T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-17T13:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "En tránsito",
+          "created_at": "2026-10-17T14:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "En destino",
+          "created_at": "2026-10-17T15:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "Entregado",
+          "created_at": "2026-10-17T16:00:00.000Z",
+          "actor": "Operador demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1044",
+      "origin": 5,
+      "destination": 2,
+      "vehicle_id": 2,
+      "company_id": null,
+      "sender": "Remitente de ejemplo 5",
+      "recipient": "Destinatario de ejemplo 5",
+      "description": "Libros y material educativo",
+      "weight": 18,
+      "price_cents": 8700,
+      "status": "En tránsito",
+      "created_by": "Gerencia demo",
+      "created_at": "2026-10-16T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-16T13:00:00.000Z",
+          "actor": "Gerencia demo"
+        },
+        {
+          "status": "En tránsito",
+          "created_at": "2026-10-16T14:00:00.000Z",
+          "actor": "Gerencia demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1043",
+      "origin": 1,
+      "destination": 3,
+      "vehicle_id": 3,
+      "company_id": null,
+      "sender": "Remitente de ejemplo 6",
+      "recipient": "Destinatario de ejemplo 6",
+      "description": "Herramientas de trabajo",
+      "weight": 6,
+      "price_cents": 3900,
+      "status": "Entregado",
+      "created_by": "Operador demo",
+      "created_at": "2026-10-15T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-15T13:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "En tránsito",
+          "created_at": "2026-10-15T14:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "En destino",
+          "created_at": "2026-10-15T15:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "Entregado",
+          "created_at": "2026-10-15T16:00:00.000Z",
+          "actor": "Operador demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1042",
+      "origin": 2,
+      "destination": 4,
+      "vehicle_id": 1,
+      "company_id": 1,
+      "sender": "Remitente de ejemplo 7",
+      "recipient": "Destinatario de ejemplo 7",
+      "description": "Artesanías de cerámica",
+      "weight": 3.5,
+      "price_cents": 2900,
+      "status": "Registrado",
+      "created_by": "Gerencia demo",
+      "created_at": "2026-10-14T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-14T13:00:00.000Z",
+          "actor": "Gerencia demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1041",
+      "origin": 3,
+      "destination": 5,
+      "vehicle_id": 2,
+      "company_id": null,
+      "sender": "Remitente de ejemplo 8",
+      "recipient": "Destinatario de ejemplo 8",
+      "description": "Equipamiento deportivo",
+      "weight": 11,
+      "price_cents": 5900,
+      "status": "En tránsito",
+      "created_by": "Operador demo",
+      "created_at": "2026-10-13T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-13T13:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "En tránsito",
+          "created_at": "2026-10-13T14:00:00.000Z",
+          "actor": "Operador demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1040",
+      "origin": 4,
+      "destination": 1,
+      "vehicle_id": 3,
+      "company_id": null,
+      "sender": "Remitente de ejemplo 9",
+      "recipient": "Destinatario de ejemplo 9",
+      "description": "Documentación comercial",
+      "weight": 1.2,
+      "price_cents": 1980,
+      "status": "En destino",
+      "created_by": "Gerencia demo",
+      "created_at": "2026-10-12T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-12T13:00:00.000Z",
+          "actor": "Gerencia demo"
+        },
+        {
+          "status": "En tránsito",
+          "created_at": "2026-10-12T14:00:00.000Z",
+          "actor": "Gerencia demo"
+        },
+        {
+          "status": "En destino",
+          "created_at": "2026-10-12T15:00:00.000Z",
+          "actor": "Gerencia demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1039",
+      "origin": 5,
+      "destination": 2,
+      "vehicle_id": 1,
+      "company_id": 1,
+      "sender": "Remitente de ejemplo 10",
+      "recipient": "Destinatario de ejemplo 10",
+      "description": "Productos de papelería",
+      "weight": 9,
+      "price_cents": 5100,
+      "status": "Entregado",
+      "created_by": "Operador demo",
+      "created_at": "2026-10-11T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-11T13:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "En tránsito",
+          "created_at": "2026-10-11T14:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "En destino",
+          "created_at": "2026-10-11T15:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "Entregado",
+          "created_at": "2026-10-11T16:00:00.000Z",
+          "actor": "Operador demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1038",
+      "origin": 1,
+      "destination": 3,
+      "vehicle_id": 2,
+      "company_id": null,
+      "sender": "Remitente de ejemplo 11",
+      "recipient": "Destinatario de ejemplo 11",
+      "description": "Muestras textiles",
+      "weight": 4,
+      "price_cents": 3100,
+      "status": "Registrado",
+      "created_by": "Gerencia demo",
+      "created_at": "2026-10-10T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-10T13:00:00.000Z",
+          "actor": "Gerencia demo"
+        }
+      ]
+    },
+    {
+      "id": "CP-2026-1037",
+      "origin": 2,
+      "destination": 4,
+      "vehicle_id": 3,
+      "company_id": null,
+      "sender": "Remitente de ejemplo 12",
+      "recipient": "Destinatario de ejemplo 12",
+      "description": "Insumos de embalaje",
+      "weight": 15,
+      "price_cents": 7500,
+      "status": "Entregado",
+      "created_by": "Operador demo",
+      "created_at": "2026-10-09T13:00:00.000Z",
+      "events": [
+        {
+          "status": "Registrado",
+          "created_at": "2026-10-09T13:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "En tránsito",
+          "created_at": "2026-10-09T14:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "En destino",
+          "created_at": "2026-10-09T15:00:00.000Z",
+          "actor": "Operador demo"
+        },
+        {
+          "status": "Entregado",
+          "created_at": "2026-10-09T16:00:00.000Z",
+          "actor": "Operador demo"
+        }
+      ]
+    }
+  ],
+  "incidents": [
+    {
+      "id": 1,
+      "shipment_id": "CP-2026-1046",
+      "description": "Embalaje pendiente de revisión en destino (ejemplo).",
+      "severity": "Media",
+      "status": "Abierta",
+      "created_at": "2026-10-18T18:30:00.000Z",
+      "created_by": "Gerencia demo"
+    }
+  ],
+  "audit": [
+    {
+      "id": 1,
+      "actor": "Gerencia demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1048",
+      "details": "Repuestos de maquinaria",
+      "created_at": "2026-10-20T13:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "actor": "Operador demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1047",
+      "details": "Textiles y prendas",
+      "created_at": "2026-10-19T13:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "actor": "Gerencia demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1046",
+      "details": "Material de oficina",
+      "created_at": "2026-10-18T13:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "actor": "Operador demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1045",
+      "details": "Accesorios electrónicos",
+      "created_at": "2026-10-17T13:00:00.000Z"
+    },
+    {
+      "id": 5,
+      "actor": "Gerencia demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1044",
+      "details": "Libros y material educativo",
+      "created_at": "2026-10-16T13:00:00.000Z"
+    },
+    {
+      "id": 6,
+      "actor": "Operador demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1043",
+      "details": "Herramientas de trabajo",
+      "created_at": "2026-10-15T13:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "actor": "Gerencia demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1042",
+      "details": "Artesanías de cerámica",
+      "created_at": "2026-10-14T13:00:00.000Z"
+    },
+    {
+      "id": 8,
+      "actor": "Operador demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1041",
+      "details": "Equipamiento deportivo",
+      "created_at": "2026-10-13T13:00:00.000Z"
+    },
+    {
+      "id": 9,
+      "actor": "Gerencia demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1040",
+      "details": "Documentación comercial",
+      "created_at": "2026-10-12T13:00:00.000Z"
+    },
+    {
+      "id": 10,
+      "actor": "Operador demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1039",
+      "details": "Productos de papelería",
+      "created_at": "2026-10-11T13:00:00.000Z"
+    },
+    {
+      "id": 11,
+      "actor": "Gerencia demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1038",
+      "details": "Muestras textiles",
+      "created_at": "2026-10-10T13:00:00.000Z"
+    },
+    {
+      "id": 12,
+      "actor": "Operador demo",
+      "action": "Registro de envío",
+      "target": "CP-2026-1037",
+      "details": "Insumos de embalaje",
+      "created_at": "2026-10-09T13:00:00.000Z"
+    }
+  ]
+}
