@@ -54,6 +54,7 @@ export function createNetworkMap(element, { compact = false } = {}) {
       }
       if (!fitted && points.length) { map.fitBounds(points, { padding: compact ? [35, 40] : [55, 55], maxZoom: 7 }); fitted = true; }
     },
+    focus(position) { map.setView([position.latitude, position.longitude], Math.max(map.getZoom(), 13)); },
     fit() { map.fitBounds(Object.values(CITY_POINTS), { padding: [45, 45] }); },
     destroy() { map.remove(); }
   };

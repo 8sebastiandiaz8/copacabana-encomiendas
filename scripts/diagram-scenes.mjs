@@ -37,23 +37,27 @@ export const scenes = [
     txt("Causas identificadas en el software", 42, 868, 19, muted),
     foot("Revisión del beta PHP/MySQL. No representa resultados de entrevistas o mediciones de campo.", 935)
   ]),
-  scene("02-contexto", "Diagrama de contexto", "El cliente interactúa a través del personal. Los dispositivos GPS aportan coordenadas con autenticación propia.", [
+  scene("02-contexto", "Diagrama de contexto", "El Cliente solicita y consulta envíos; el personal opera, Administración gestiona cuentas y el GPS aporta coordenadas.", [
     ...title("Quién intercambia información con el sistema", "Diagrama de contexto · Un único proceso representa el sistema completo", 1400),
     shape("operator", 40, 250, 250, 150, "Operador\nde sucursal", "#fff0df"),
     shape("central", 490, 215, 420, 270, "0\nSistema de gestión\nde encomiendas\nCopacabana", "#eaf2fc", { roundness: { type: 3 }, strokeWidth: 2.3 }),
-    shape("manager", 1110, 250, 250, 150, "Gerencia", "#fff0df"),
+    shape("manager", 1110, 250, 250, 150, "Administrador /\nGerencia", "#fff0df"),
     shape("device", 545, 700, 310, 125, "Dispositivo GPS\no servicio externo", "#eaf6f0"),
+    shape("client", 40, 520, 250, 140, "Cliente\n(registro y consulta)", "#fff0df"),
     arrow([[295, 280], [485, 280]]), txt("Datos del envío,\nestado e incidencias", 300, 190, 18),
     arrow([[485, 380], [295, 380]]), txt("Código, historial\ny confirmaciones", 300, 410, 18),
-    arrow([[1105, 280], [915, 280]]), txt("Catálogos, operaciones\ny claves GPS", 920, 190, 18),
+    arrow([[1105, 280], [915, 280]]), txt("Cuentas, catálogos,\noperaciones y claves GPS", 920, 190, 18),
     arrow([[915, 380], [1105, 380]]), txt("Registros, auditoría\ny ubicaciones", 920, 410, 18),
     arrow([[635, 695], [635, 490]]), txt("Coordenadas, precisión\ny hora de captura", 340, 566, 19),
     arrow([[765, 490], [765, 695]]), txt("Aceptación o rechazo\nde la lectura", 795, 570, 19),
-    foot("Los teléfonos comparten ubicación desde una sesión del personal. La demo pública no transmite GPS.", 890)
+    arrow([[295, 555], [400, 555], [400, 435], [485, 435]]), txt("Alta, solicitud\ny consulta", 300, 535, 17),
+    arrow([[485, 462], [430, 462], [430, 622], [295, 622]]), txt("Código e historial\npropio", 302, 625, 17),
+    foot("Pages guarda el perfil de prueba y la lectura GPS solo en ese navegador; la aplicación Python sincroniza cuentas y posiciones.", 890)
   ]),
   scene("03-flujo-datos", "Flujo de datos de nivel 1", "Procesos del sistema y almacenes de datos. Las entradas y consultas se especifican en las flechas y en el estudio.", (() => {
     const e = title("De los datos de entrada a una operación trazable", "DFD de nivel 1 · Flujos principales; validaciones descritas en el estudio", 1600);
     e.push(shape("staff", 45, 190, 260, 150, "Personal\n(operador / gerencia)", "#fff0df"));
+    e.push(shape("public-client", 45, 385, 260, 125, "Cliente", "#fff0df"));
     e.push(shape("external-gps", 45, 980, 260, 120, "Dispositivo GPS", "#eaf6f0"));
     const processes = [
       ["p1", 180, "1. Registrar encomienda", "Datos de envío"],
@@ -67,6 +71,8 @@ export const scenes = [
       e.push(shape(name, 485, y, 390, 105, label, "#eaf2fc"));
       if (name !== "p6") e.push(arrow([[name === "p1" ? 310 : 355, y + 53], [480, y + 53]]), txt(input, 360, y + 9, 13));
     }
+    e.push(arrow([[310, 430], [390, 430], [390, 232], [480, 232]]), txt("Cuenta + solicitud", 312, 390, 16));
+    e.push(arrow([[480, 265], [420, 265], [420, 480], [310, 480]]), txt("Código + historial", 315, 486, 16));
     e.push(line([[305, 290], [355, 290], [355, 913]], { strokeColor: "#c4cfdd" }));
     e.push(arrow([[310, 1055], [480, 1083]]), txt("Posición + hora", 323, 1000, 17));
     const store = (name, y, label) => [line([[1150, y], [1470, y]], { strokeWidth: 2 }), line([[1150, y + 78], [1470, y + 78]], { strokeWidth: 2 }), line([[1150, y], [1150, y + 78]], { strokeWidth: 2 }), txt(label, 1170, y + 24, 22)];
@@ -85,11 +91,11 @@ export const scenes = [
     e.push(foot("D2 registra además las operaciones de catálogos, incidencias y autorizaciones GPS. No almacena un historial de coordenadas.", 1200));
     return e;
   })()),
-  scene("04-casos-uso", "Casos de uso", "Permisos de operación, administración y telemetría. El operador solo modifica sus propios envíos.", [
+  scene("04-casos-uso", "Casos de uso", "El Cliente consulta sus envíos, el Operador gestiona los propios y Administración administra permisos.", [
     ...title("Responsabilidades de cada actor", "UML · Casos de uso", 1500),
-    shape("boundary", 280, 155, 930, 950, "", "transparent", { strokeColor: "#a6b8cf", roundness: null, roughness: .3 }),
+    shape("boundary", 280, 155, 930, 1050, "", "transparent", { strokeColor: "#a6b8cf", roundness: null, roughness: .3 }),
     txt("Sistema Copacabana", 610, 180, 28),
-    ...person("Operador", 75, 360), ...person("Gerencia", 1320, 360),
+    ...person("Operador", 75, 360), ...person("Administrador /\nGerencia", 1320, 360),
     shape("uc1", 350, 275, 355, 100, "Registrar y consultar\nencomiendas", "#eaf2fc", { type: "ellipse" }),
     shape("uc2", 350, 460, 355, 100, "Actualizar recorrido", "#eaf2fc", { type: "ellipse" }),
     shape("uc3", 350, 645, 355, 100, "Reportar y resolver\nincidencias", "#eaf2fc", { type: "ellipse" }),
@@ -98,14 +104,19 @@ export const scenes = [
     shape("uc6", 790, 460, 355, 100, "Consultar auditoría", "#fff0df", { type: "ellipse" }),
     shape("uc7", 790, 645, 355, 100, "Autorizar y revocar\ndispositivos GPS", "#fff0df", { type: "ellipse" }),
     shape("uc8", 790, 830, 355, 100, "Recibir lecturas\nGPS autenticadas", "#eaf6f0", { type: "ellipse" }),
+    shape("uc9", 350, 1015, 355, 100, "Registrarse, solicitar y\nconsultar sus envíos", "#eaf2fc", { type: "ellipse" }),
+    shape("uc10", 790, 1015, 355, 100, "Administrar cuentas\ny asignar roles", "#fff0df", { type: "ellipse" }),
     line([[165, 430], [350, 325]]), line([[165, 430], [350, 510]]), line([[165, 430], [350, 695]]), line([[165, 430], [225, 430], [225, 880], [350, 880]]),
     line([[1320, 430], [1145, 325]]), line([[1320, 430], [1145, 510]]), line([[1320, 430], [1145, 695]]),
     line([[1365, 350], [1365, 245], [740, 245], [740, 880]], { strokeStyle: "solid" }),
     line([[740, 325], [705, 325]], { strokeStyle: "solid" }), line([[740, 510], [705, 510]], { strokeStyle: "solid" }), line([[740, 695], [705, 695]], { strokeStyle: "solid" }), line([[740, 880], [705, 880]], { strokeStyle: "solid" }),
+    ...person("Cliente", 75, 810),
+    line([[165, 880], [245, 880], [245, 1065], [350, 1065]]),
+    line([[1365, 430], [1260, 430], [1260, 1065], [1145, 1065]]),
     txt("También puede realizar\nlas operaciones del personal", 1235, 715, 17, muted),
     shape("gps-actor", 820, 1190, 310, 110, "«sistema externo»\nDispositivo GPS", "#eaf6f0"),
     line([[975, 1190], [975, 930]]),
-    foot("Líneas de asociación: participación del actor. Gerencia participa también en las operaciones del personal.", 1350)
+    foot("El Cliente consulta solo sus registros. Administrador y Gerencia operan el sistema; solo Administrador gestiona cuentas.", 1350)
   ]),
   scene("05-clases", "Modelo de clases", "Modelo conceptual del núcleo y la telemetría. Las entidades se persisten como registros SQLite.", [
     ...title("El envío como centro del modelo", "UML · Clases conceptuales y multiplicidades", 1460),
@@ -115,14 +126,16 @@ export const scenes = [
     ...klass("event", 50, 700, "Evento", ["estado: Estado", "fecha: datetime", "actor: str"]),
     ...klass("incident", 570, 700, "Incidencia", ["descripción: str", "severidad: Severidad", "estado: abierta | resuelta"]),
     ...klass("location", 1090, 700, "UbicaciónGPS", ["latitud / longitud: float", "precisiónMetros: float", "capturadaEn: datetime", "fuente: teléfono | GPS", "activa: bool"]),
+    ...klass("user", 50, 1020, "Usuario", ["id: int", "username: str", "rol: 4 perfiles", "email / teléfono", "activo: bool"]),
     line([[370, 280], [570, 280]]), txt("1", 385, 247, 22), txt("0..*", 515, 247, 22), txt("origen", 425, 295, 20, muted),
     line([[370, 385], [570, 385]]), txt("1", 385, 353, 22), txt("0..*", 515, 353, 22), txt("destino", 420, 401, 20, muted),
     line([[890, 315], [1090, 315]]), txt("0..*", 905, 280, 22), txt("0..1", 1030, 280, 22), txt("asignación", 925, 332, 19, muted),
     line([[630, 440], [630, 550], [210, 550], [210, 700]]), txt("1", 646, 465, 22), txt("1..*", 225, 660, 22), txt("historial", 330, 568, 20, muted),
     line([[760, 440], [760, 700]]), txt("1", 780, 465, 22), txt("0..*", 780, 660, 22),
     line([[1250, 440], [1250, 700]]), txt("1", 1270, 465, 22), txt("0..1", 1270, 660, 22), txt("última lectura", 1095, 570, 20, muted),
-    foot("Empresa, Empleado, Usuario y DispositivoGPS completan el diccionario de datos. Se conserva solo la última ubicación del vehículo.", 1020),
-    foot("Implementación: ShipmentService aplica las reglas; Flask autoriza las operaciones y SQLite conserva las relaciones.", 1060)
+    line([[370, 1100], [485, 1100], [485, 510], [730, 510], [730, 440]]), txt("solicita", 495, 516, 18, muted), txt("1", 380, 1072, 20), txt("0..*", 690, 462, 20),
+    foot("Empresa y Empleado completan el diccionario. Un usuario Cliente queda vinculado a sus encomiendas; se conserva la última ubicación por vehículo.", 1320),
+    foot("ShipmentService aplica las reglas; Flask autoriza según cuatro roles y SQLite conserva las relaciones.", 1360)
   ]),
   scene("06-secuencia", "Secuencia de registro", "Registro transaccional de una encomienda. El fracaso de validación no crea registros parciales.", (() => {
     const e = title("Cómo se registra una encomienda", "UML · Secuencia entre interfaz, API, dominio y persistencia", 1480);

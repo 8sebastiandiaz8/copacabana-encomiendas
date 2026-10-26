@@ -7,7 +7,7 @@
   {
     "slug": "02-contexto",
     "name": "Diagrama de contexto",
-    "caption": "El cliente interactúa a través del personal. Los dispositivos GPS aportan coordenadas con autenticación propia."
+    "caption": "El Cliente solicita y consulta envíos; el personal opera, Administración gestiona cuentas y el GPS aporta coordenadas."
   },
   {
     "slug": "03-flujo-datos",
@@ -17,7 +17,7 @@
   {
     "slug": "04-casos-uso",
     "name": "Casos de uso",
-    "caption": "Permisos de operación, administración y telemetría. El operador solo modifica sus propios envíos."
+    "caption": "El Cliente consulta sus envíos, el Operador gestiona los propios y Administración administra permisos."
   },
   {
     "slug": "05-clases",

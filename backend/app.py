@@ -5,6 +5,7 @@ from functools import wraps
 from pathlib import Path
 import json
 import os
+import re
 import secrets
 import sqlite3
 import time
@@ -66,7 +67,7 @@ class ShipmentService:
         self.db = db
         self.cipher = cipher
 
-    def register(self, data, actor):
+    def register(self, data, actor, client_user_id=None):
         origin = reference(self.db, data, "origin", "branches")
         destination = reference(self.db, data, "destination", "branches")
         if origin == destination:
@@ -88,9 +89,11 @@ class ShipmentService:
             text(data, "sender"), text(data, "recipient"),
             self.cipher.encrypt(text(data, "sender_ci", 30).encode()).decode(),
             self.cipher.encrypt(text(data, "recipient_ci", 30).encode()).decode(),
-            text(data, "description", 500), float(weight), price, "Registrado", actor, created,
+            text(data, "description", 500), float(weight), price, "Registrado", actor, created, client_user_id,
         )
-        self.db.execute("INSERT INTO shipments VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", values)
+        self.db.execute("""INSERT INTO shipments(id,origin,destination,vehicle_id,company_id,sender,recipient,
+            sender_ci,recipient_ci,description,weight,price_cents,status,created_by,created_at,client_user_id)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", values)
         self.db.execute("INSERT INTO events(shipment_id,status,created_at,actor) VALUES(?,?,?,?)",
                         (shipment_id, "Registrado", created, actor))
         audit(self.db, actor, "Registro de envío", shipment_id, "Encomienda registrada")
@@ -154,6 +157,7 @@ def create_app(config=None):
     cipher = Fernet(app.config["ENCRYPTION_KEY"].encode())
     # shortcut: rate limits are per process; use a shared limiter with multiple workers.
     attempts = {}
+    registrations = {}
 
     def db():
         if "db" not in g:
@@ -167,14 +171,16 @@ def create_app(config=None):
         if "db" in g:
             g.db.close()
 
-    def auth(manager=False):
+    def auth(manager=False, admin=False):
         def decorator(fn):
             @wraps(fn)
             def wrapped(*args, **kwargs):
-                user = db().execute("SELECT id,username,role FROM users WHERE id=?", (session.get("user_id"),)).fetchone()
-                if not user:
+                user = db().execute("SELECT id,username,role,display_name,email,phone,is_active FROM users WHERE id=?", (session.get("user_id"),)).fetchone()
+                if not user or not user["is_active"]:
                     return jsonify(error="Inicia sesión para continuar."), 401
-                if manager and user["role"] != "gerente":
+                if admin and user["role"] != "administrador":
+                    return jsonify(error="Esta operación requiere el rol Administrador."), 403
+                if manager and user["role"] not in ("gerente", "administrador"):
                     return jsonify(error="Esta operación requiere el rol de gerente."), 403
                 g.user = dict(user)
                 return fn(*args, **kwargs)
@@ -191,7 +197,9 @@ def create_app(config=None):
         row = db().execute("SELECT * FROM shipments WHERE id=?", (shipment_id,)).fetchone()
         if not row:
             return None, (jsonify(error="No se encontró la encomienda."), 404)
-        if g.user["role"] != "gerente" and row["created_by"] != g.user["username"]:
+        if g.user["role"] == "cliente":
+            return None, (jsonify(error="Los clientes solo pueden consultar sus envíos."), 403)
+        if g.user["role"] not in ("gerente", "administrador") and row["created_by"] != g.user["username"]:
             return None, (jsonify(error="Solo puedes modificar tus propios envíos."), 403)
         return row, None
 
@@ -236,7 +244,7 @@ def create_app(config=None):
     def current_session():
         if "csrf_token" not in session:
             session["csrf_token"] = secrets.token_urlsafe(32)
-        user = db().execute("SELECT username,role FROM users WHERE id=?", (session.get("user_id"),)).fetchone()
+        user = db().execute("SELECT id,username,role,display_name,email,phone FROM users WHERE id=? AND is_active=1", (session.get("user_id"),)).fetchone()
         return jsonify(user=dict(user) if user else None, csrf_token=session["csrf_token"], mode="server")
 
     @app.post("/api/login")
@@ -254,7 +262,7 @@ def create_app(config=None):
         start, count = attempts.get(ip, (timestamp, 0))
         if count >= 10:
             return jsonify(error="Demasiados intentos. Espera 15 minutos."), 429
-        user = db().execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+        user = db().execute("SELECT * FROM users WHERE username=? AND is_active=1", (username,)).fetchone()
         if not user or not check_password_hash(user["password_hash"], password):
             attempts[ip] = (start, count + 1)
             return jsonify(error="Usuario o contraseña incorrectos."), 401
@@ -264,7 +272,105 @@ def create_app(config=None):
         session.update(user_id=user["id"], csrf_token=secrets.token_urlsafe(32))
         with db():
             audit(db(), username, "Inicio de sesión", username, "Acceso autorizado")
-        return jsonify(user={"username": username, "role": user["role"]}, csrf_token=session["csrf_token"])
+        return jsonify(user={"id": user["id"], "username": username, "role": user["role"], "display_name": user["display_name"], "email": user["email"], "phone": user["phone"]}, csrf_token=session["csrf_token"])
+
+    @app.post("/api/register-client")
+    def register_client():
+        ip = request.remote_addr or "unknown"
+        timestamp = time.time()
+        start, count = registrations.get(ip, (timestamp, 0))
+        if timestamp - start >= 900:
+            start, count = timestamp, 0
+        if count >= 10:
+            return jsonify(error="Se alcanzó el límite de registros. Inténtalo más tarde."), 429
+        registrations[ip] = (start, count + 1)
+        data = body()
+        username = text(data, "username", 60)
+        name = text(data, "display_name", 150)
+        email = text(data, "email", 254).lower()
+        phone = text(data, "phone", 40)
+        password = data.get("password")
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            raise ValidationError("Ingresa un correo válido.")
+        if not isinstance(password, str) or not 12 <= len(password) <= 256:
+            raise ValidationError("La contraseña debe tener entre 12 y 256 caracteres.")
+        try:
+            with db():
+                cursor = db().execute("""INSERT INTO users(username,password_hash,role,email,display_name,phone)
+                    VALUES(?,?,'cliente',?,?,?)""", (username, generate_password_hash(password), email, name, phone))
+                audit(db(), username, "Registro de Cliente", f"users/{cursor.lastrowid}", "Cuenta Cliente creada")
+        except sqlite3.IntegrityError:
+            return jsonify(error="Ese nombre de usuario o correo ya está registrado."), 409
+        return jsonify(ok=True), 201
+
+    @app.get("/api/users")
+    @auth(admin=True)
+    def list_users():
+        users = [dict(row) for row in db().execute(
+            "SELECT id,username,role,email,display_name,phone,is_active FROM users ORDER BY id")]
+        return jsonify(users=users)
+
+    @app.post("/api/users")
+    @auth(admin=True)
+    def add_user():
+        data = body()
+        username = text(data, "username", 60)
+        role = text(data, "role", 30)
+        if role not in ("administrador", "gerente", "operador", "cliente"):
+            raise ValidationError("Selecciona un rol válido.")
+        password = data.get("password")
+        if not isinstance(password, str) or not 12 <= len(password) <= 256:
+            raise ValidationError("La contraseña debe tener entre 12 y 256 caracteres.")
+        email = text(data, "email", 254).lower() if data.get("email") else None
+        display_name = text(data, "display_name", 150) if data.get("display_name") else None
+        phone = text(data, "phone", 40) if data.get("phone") else None
+        if role == "cliente" and (not email or not display_name):
+            raise ValidationError("Los clientes requieren nombre y correo.")
+        if email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+            raise ValidationError("Ingresa un correo válido.")
+        try:
+            with db():
+                cursor = db().execute("""INSERT INTO users(username,password_hash,role,email,display_name,phone)
+                    VALUES(?,?,?,?,?,?)""", (username, generate_password_hash(password), role, email, display_name, phone))
+                audit(db(), g.user["username"], "Creación de cuenta", f"users/{cursor.lastrowid}", f"Rol {role}")
+        except sqlite3.IntegrityError:
+            return jsonify(error="Ese nombre de usuario o correo ya está registrado."), 409
+        return jsonify(id=cursor.lastrowid), 201
+
+    @app.patch("/api/users/<int:user_id>")
+    @auth(admin=True)
+    def update_user(user_id):
+        data = body()
+        fields_to_update = {}
+        if "role" in data:
+            if data["role"] not in ("administrador", "gerente", "operador", "cliente"):
+                raise ValidationError("Selecciona un rol válido.")
+            fields_to_update["role"] = data["role"]
+        if "is_active" in data:
+            if not isinstance(data["is_active"], bool):
+                raise ValidationError("El estado de la cuenta no es válido.")
+            if user_id == g.user["id"] and not data["is_active"]:
+                raise ValidationError("No puedes desactivar tu propia cuenta.")
+            fields_to_update["is_active"] = int(data["is_active"])
+        if not fields_to_update:
+            raise ValidationError("Indica el nuevo rol o estado de la cuenta.")
+        with db():
+            db().execute("BEGIN IMMEDIATE")
+            account = db().execute("SELECT id,role,is_active FROM users WHERE id=?", (user_id,)).fetchone()
+            if not account:
+                return jsonify(error="No se encontró la cuenta."), 404
+            next_role = fields_to_update.get("role", account["role"])
+            next_active = fields_to_update.get("is_active", account["is_active"])
+            if user_id == g.user["id"] and next_role != account["role"]:
+                raise ValidationError("No puedes cambiar tu propio rol.")
+            if account["role"] == "administrador" and account["is_active"] and (next_role != "administrador" or not next_active):
+                other = db().execute("SELECT 1 FROM users WHERE role='administrador' AND is_active=1 AND id<>? LIMIT 1", (user_id,)).fetchone()
+                if not other:
+                    raise ValidationError("Debe quedar al menos un administrador activo.")
+            db().execute("UPDATE users SET " + ",".join(f"{key}=?" for key in fields_to_update) + " WHERE id=?",
+                         (*fields_to_update.values(), user_id))
+            audit(db(), g.user["username"], "Actualización de cuenta", f"users/{user_id}", "Rol o acceso actualizado")
+        return jsonify(ok=True)
 
     @app.post("/api/logout")
     def logout():
@@ -276,11 +382,18 @@ def create_app(config=None):
     def all_data():
         result = {table: [dict(r) for r in db().execute(f"SELECT * FROM {table} ORDER BY id")]
                   for table in ("branches", "companies", "vehicles", "employees", "incidents")}
-        if g.user["role"] != "gerente":
+        manager_access = g.user["role"] in ("gerente", "administrador")
+        if not manager_access:
             for employee in result["employees"]:
                 employee.pop("salary_cents", None)
+        if g.user["role"] == "cliente":
+            result["companies"] = []
+            result["vehicles"] = []
+            result["employees"] = []
         result["shipments"] = []
-        for row in db().execute("SELECT * FROM shipments ORDER BY created_at DESC"):
+        shipments_query = "SELECT * FROM shipments WHERE client_user_id=? ORDER BY created_at DESC" if g.user["role"] == "cliente" else "SELECT * FROM shipments ORDER BY created_at DESC"
+        shipments_args = (g.user["id"],) if g.user["role"] == "cliente" else ()
+        for row in db().execute(shipments_query, shipments_args):
             item = dict(row)
             # Personal IDs are encrypted at rest and never exposed in the listing API.
             item.pop("sender_ci")
@@ -288,15 +401,26 @@ def create_app(config=None):
             item["events"] = [dict(r) for r in db().execute(
                 "SELECT status,created_at,actor FROM events WHERE shipment_id=? ORDER BY id", (item["id"],))]
             result["shipments"].append(item)
+        if g.user["role"] == "cliente":
+            shipment_ids = [item["id"] for item in result["shipments"]]
+            result["incidents"] = ([dict(r) for r in db().execute(
+                f"SELECT * FROM incidents WHERE shipment_id IN ({','.join('?' for _ in shipment_ids)}) ORDER BY id DESC", shipment_ids
+            )] if shipment_ids else [])
         result["audit"] = ([dict(r) for r in db().execute("SELECT * FROM audit ORDER BY id DESC LIMIT 500")]
-                           if g.user["role"] == "gerente" else [])
+                           if manager_access else [])
         return jsonify(result)
 
     @app.post("/api/shipments")
     @auth()
     def register():
+        data = body()
+        client_user_id = None
+        if g.user["role"] == "cliente":
+            data = {**data, "sender": g.user["display_name"], "sender_ci": "No declarado", "recipient_ci": "No declarado",
+                    "vehicle_id": None, "company_id": None}
+            client_user_id = g.user["id"]
         with db():
-            shipment_id = ShipmentService(db(), cipher).register(body(), g.user["username"])
+            shipment_id = ShipmentService(db(), cipher).register(data, g.user["username"], client_user_id)
         return jsonify(id=shipment_id), 201
 
     @app.patch("/api/shipments/<shipment_id>/status")
@@ -412,7 +536,7 @@ def create_app(config=None):
 
     @app.cli.command("create-user")
     @click.option("--username", prompt="Usuario")
-    @click.option("--role", type=click.Choice(["gerente", "operador"]), default="gerente")
+    @click.option("--role", type=click.Choice(["administrador", "gerente", "operador", "cliente"]), default="gerente")
     @click.password_option(confirmation_prompt=True)
     def create_user(username, role, password):
         """Crear un usuario sin publicar credenciales predeterminadas."""
@@ -429,7 +553,33 @@ def create_app(config=None):
     with app.app_context():
         connection = db()
         is_new = not connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='branches'").fetchone()
+        old_users = connection.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").fetchone()
+        if old_users and "administrador" not in old_users["sql"]:
+            # Preserve existing users while widening the role constraint.
+            connection.commit()
+            connection.execute("PRAGMA foreign_keys=OFF")
+            connection.executescript("""BEGIN IMMEDIATE;
+                ALTER TABLE users RENAME TO users_legacy;
+                CREATE TABLE users (
+                    id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL CHECK(role IN ('administrador','gerente','operador','cliente')),
+                    email TEXT UNIQUE, display_name TEXT, phone TEXT,
+                    is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1))
+                );
+                INSERT INTO users(id,username,password_hash,role)
+                    SELECT id,username,password_hash,role FROM users_legacy;
+                DROP TABLE users_legacy;
+                COMMIT;""")
+            connection.execute("PRAGMA foreign_keys=ON")
         connection.executescript((ROOT / "backend/schema.sql").read_text(encoding="utf-8"))
+        user_columns = {row["name"] for row in connection.execute("PRAGMA table_info(users)")}
+        for name, declaration in (("email", "TEXT"), ("display_name", "TEXT"), ("phone", "TEXT"),
+                                  ("is_active", "INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1))")):
+            if name not in user_columns:
+                connection.execute(f"ALTER TABLE users ADD COLUMN {name} {declaration}")
+        shipment_columns = {row["name"] for row in connection.execute("PRAGMA table_info(shipments)")}
+        if "client_user_id" not in shipment_columns:
+            connection.execute("ALTER TABLE shipments ADD COLUMN client_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL")
         if is_new:
             data = json.loads((ROOT / "web/assets/seed.json").read_text(encoding="utf-8"))
             with connection:

@@ -14,7 +14,9 @@ def register_gps(app, db, auth, body):
     def permission(vehicle_id):
         if not db().execute("SELECT 1 FROM vehicles WHERE id=?", (vehicle_id,)).fetchone():
             return jsonify(error="Vehículo no encontrado."), 404
-        if g.user["role"] != "gerente" and not db().execute(
+        if g.user["role"] == "cliente":
+            return jsonify(error="El seguimiento GPS está reservado al personal autorizado."), 403
+        if g.user["role"] not in ("gerente", "administrador") and not db().execute(
             "SELECT 1 FROM shipments WHERE vehicle_id=? AND created_by=? AND status IN ('Registrado','En tránsito','En destino')",
             (vehicle_id, g.user["username"]),
         ).fetchone():
@@ -54,7 +56,16 @@ def register_gps(app, db, auth, body):
     @gps.get("/api/gps/locations")
     @auth()
     def locations():
-        rows = db().execute("SELECT l.*,v.plate FROM vehicle_locations l JOIN vehicles v ON v.id=l.vehicle_id").fetchall()
+        if g.user["role"] in ("gerente", "administrador"):
+            rows = db().execute("SELECT l.*,v.plate FROM vehicle_locations l JOIN vehicles v ON v.id=l.vehicle_id").fetchall()
+        elif g.user["role"] == "cliente":
+            rows = db().execute("""SELECT l.*,v.plate FROM vehicle_locations l JOIN vehicles v ON v.id=l.vehicle_id
+                WHERE EXISTS(SELECT 1 FROM shipments s WHERE s.vehicle_id=l.vehicle_id AND s.client_user_id=?)""",
+                (g.user["id"],)).fetchall()
+        else:
+            rows = db().execute("""SELECT l.*,v.plate FROM vehicle_locations l JOIN vehicles v ON v.id=l.vehicle_id
+                WHERE EXISTS(SELECT 1 FROM shipments s WHERE s.vehicle_id=l.vehicle_id AND s.created_by=?
+                AND s.status IN ('Registrado','En tránsito','En destino'))""", (g.user["username"],)).fetchall()
         result = []
         for row in rows:
             item = dict(row)

@@ -3,7 +3,11 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('gerente', 'operador'))
+    role TEXT NOT NULL CHECK(role IN ('administrador', 'gerente', 'operador', 'cliente')),
+    email TEXT UNIQUE,
+    display_name TEXT,
+    phone TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1))
 );
 CREATE TABLE IF NOT EXISTS branches (
     id INTEGER PRIMARY KEY,
@@ -46,6 +50,7 @@ CREATE TABLE IF NOT EXISTS shipments (
     status TEXT NOT NULL CHECK(status IN ('Registrado','En tránsito','En destino','Entregado','Cancelado')),
     created_by TEXT NOT NULL,
     created_at TEXT NOT NULL,
+    client_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     CHECK(origin <> destination)
 );
 CREATE TABLE IF NOT EXISTS events (

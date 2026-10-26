@@ -4,7 +4,7 @@ import { mountLiveMap } from "./live-map.js";
 const store = new Store();
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const labels = { resumen: "Resumen", encomiendas: "Encomiendas", mapa: "Mapa y GPS", seguimiento: "Seguimiento", incidencias: "Incidencias", sucursales: "Sucursales", empresas: "Empresas", flota: "Flota", personal: "Personal", auditoria: "Auditoría" };
+const labels = { resumen: "Resumen", encomiendas: "Encomiendas", mapa: "Mapa y GPS", seguimiento: "Seguimiento", incidencias: "Incidencias", sucursales: "Sucursales", empresas: "Empresas", flota: "Flota", personal: "Personal", auditoria: "Auditoría", usuarios: "Usuarios" };
 const catalogs = { sucursales: "branches", empresas: "companies", flota: "vehicles", personal: "employees" };
 const badgeClass = { Registrado: "registered", "En tránsito": "transit", "En destino": "destination", Entregado: "delivered", Cancelado: "cancelled", Abierta: "transit", Resuelta: "delivered" };
 let view = "resumen";
@@ -12,7 +12,9 @@ let search = "";
 let statusFilter = "";
 let toastTimer;
 let disposeMap = null;
-const manager = () => store.user?.role === "gerente";
+const manager = () => ["gerente", "administrador"].includes(store.user?.role);
+const administrator = () => store.user?.role === "administrador";
+const client = () => store.user?.role === "cliente";
 const city = id => store.data.branches.find(b => b.id === Number(id))?.city || "Sin sucursal";
 const date = value => new Intl.DateTimeFormat("es-BO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/La_Paz" }).format(new Date(value));
 const dateTime = value => new Intl.DateTimeFormat("es-BO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz" }).format(new Date(value));
@@ -33,7 +35,7 @@ function toast(message, error = false) {
 function modal(title, html) {
   $("#modal-title").textContent = title;
   $("#modal-content").innerHTML = html;
-  $("#modal").showModal();
+  if (!$("#modal").open) $("#modal").showModal();
 }
 
 function heading(title, subtitle, controls = "") {
@@ -49,7 +51,10 @@ function shipmentTable(items) {
 }
 
 function summary() {
-  const { shipments, incidents, branches } = store.data;
+  const shipments = store.data.shipments.filter(s => store.own(s));
+  const shipmentIds = new Set(shipments.map(s => s.id));
+  const incidents = store.data.incidents.filter(i => shipmentIds.has(i.shipment_id));
+  const { branches } = store.data;
   const counts = [
     ["Encomiendas registradas", shipments.length, "Total del registro", "◇"],
     ["En tránsito", shipments.filter(s => s.status === "En tránsito").length, "En camino a su destino", "↗"],
@@ -57,7 +62,7 @@ function summary() {
     ["Incidencias abiertas", incidents.filter(i => i.status === "Abierta").length, "Pendientes de atención", "⚑"]
   ];
   const activity = shipments.flatMap(s => s.events.map(e => ({ ...e, id: s.id }))).sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 4);
-  return heading("Tu operación, de un vistazo.", "Consulta los envíos y las tareas pendientes de la agencia.", '<button class="button" data-action="new-shipment">＋ Nueva encomienda</button>') +
+  return heading(client() ? "Solicita y consulta tus envíos." : "Tu operación, de un vistazo.", client() ? "Consulta tus encomiendas y registra una nueva solicitud." : "Consulta los envíos y las tareas pendientes de la agencia.", `<button class="button" data-action="new-shipment">＋ ${client() ? "Solicitar envío" : "Nueva encomienda"}</button>`) +
     `<div class="stats-grid">${counts.map(([label, count, hint, symbol]) => `<div class="stat"><span class="stat-label">${label}</span><span class="stat-symbol" aria-hidden="true">${symbol}</span><strong>${count}</strong><small>${hint}</small></div>`).join("")}</div>
     <div class="dashboard-grid"><div><section class="panel"><div class="panel-heading"><div><h2>Encomiendas recientes</h2><p>Los últimos movimientos de la agencia</p></div><a href="#encomiendas">Ver todas ↗</a></div>${shipmentTable(shipments.slice(0, 6))}</section>
     <section class="panel"><div class="panel-heading"><h2>Actividad de los envíos</h2><a href="#seguimiento">Consultar recorrido ↗</a></div><div class="panel-body">${activity.map(e => `<div class="activity-item"><span class="activity-dot"></span><div><p><strong>${esc(e.id)}</strong> · ${esc(e.status)}</p><small>${dateTime(e.created_at)} · ${esc(e.actor)}</small></div></div>`).join("") || empty("Aún no hay movimientos")}</div></section></div>
@@ -65,13 +70,13 @@ function summary() {
 }
 
 function shipmentList() {
-  return heading("Encomiendas", "Gestiona los envíos desde su registro hasta la entrega.", '<button class="button secondary" data-action="export">↓ Exportar CSV</button><button class="button" data-action="new-shipment">＋ Nueva encomienda</button>') +
+  return heading("Encomiendas", client() ? "Consulta tus solicitudes y su estado." : "Gestiona los envíos desde su registro hasta la entrega.", `<button class="button secondary" data-action="export">↓ Exportar CSV</button><button class="button" data-action="new-shipment">＋ ${client() ? "Solicitar envío" : "Nueva encomienda"}</button>`) +
     `<section class="panel"><div class="toolbar"><input id="search" class="search-input" type="search" aria-label="Buscar encomiendas" placeholder="Buscar código, descripción o persona…" value="${esc(search)}"><select id="status-filter" aria-label="Filtrar por estado"><option value="">Todos los estados</option>${[...STATES, "Cancelado"].map(s => `<option ${statusFilter === s ? "selected" : ""}>${s}</option>`).join("")}</select><span class="result-count" id="result-count"></span></div><div id="shipment-results"></div></section>`;
 }
 
 function filtered() {
   const needle = search.toLocaleLowerCase("es");
-  return store.data.shipments.filter(s => (!statusFilter || s.status === statusFilter) &&
+  return store.data.shipments.filter(s => store.own(s) && (!statusFilter || s.status === statusFilter) &&
     `${s.id} ${s.description} ${s.sender} ${s.recipient} ${city(s.origin)} ${city(s.destination)}`.toLocaleLowerCase("es").includes(needle));
 }
 
@@ -88,7 +93,6 @@ function tracking() {
 
 function shipmentDetail(item, inModal = false) {
   const next = nextStates(item, store.data.incidents)[0];
-  const own = store.own(item);
   const events = item.events;
   const activeIncidents = store.data.incidents.filter(i => i.shipment_id === item.id && i.status === "Abierta");
   return `<div class="${inModal ? "" : "panel panel-body"}"><div class="panel-heading"><div><h2>${esc(item.id)}</h2><p>${esc(city(item.origin))} → ${esc(city(item.destination))}</p></div>${badge(item.status)}</div>
@@ -97,13 +101,14 @@ function shipmentDetail(item, inModal = false) {
     <dl class="detail-grid"><div><dt>Remitente</dt><dd>${esc(item.sender)}</dd></div><div><dt>Destinatario</dt><dd>${esc(item.recipient)}</dd></div><div><dt>Contenido</dt><dd>${esc(item.description)}</dd></div><div><dt>Peso / tarifa referencial</dt><dd>${esc(item.weight)} kg · ${money(item.price_cents)}</dd></div><div><dt>Registro</dt><dd>${dateTime(item.created_at)}</dd></div><div><dt>Registrado por</dt><dd>${esc(item.created_by)}</dd></div><div><dt>Vehículo</dt><dd>${esc(store.data.vehicles.find(v => v.id === item.vehicle_id)?.plate || "Sin asignar")}</dd></div><div><dt>Empresa</dt><dd>${esc(store.data.companies.find(c => c.id === item.company_id)?.name || "Cliente particular")}</dd></div></dl>
     ${activeIncidents.map(i => `<p class="notice warning"><strong>Incidencia ${esc(i.severity)}:</strong> ${esc(i.description)}</p>`).join("")}
     <details><summary>Historial completo (${events.length})</summary><div class="panel-body">${events.map(e => `<div class="activity-item"><span class="activity-dot"></span><div><p>${esc(e.status)}</p><small>${dateTime(e.created_at)} · ${esc(e.actor)}</small></div></div>`).join("")}</div></details>
-    ${own ? `<div class="form-actions">${item.status === "Registrado" ? `<button class="button secondary" data-action="cancel-shipment" data-id="${esc(item.id)}">Cancelar envío</button>` : ""}${next ? `<button class="button" data-action="advance" data-id="${esc(item.id)}" data-status="${next}">${({ "En tránsito": "Despachar envío", "En destino": "Confirmar llegada", Entregado: "Confirmar entrega" })[next]}</button>` : ""}</div>` : '<p class="notice">Tu rol permite consultar este envío. Solo su autor o gerencia pueden modificarlo.</p>'}</div>`;
+    ${store.canOperateShipment(item) ? `<div class="form-actions">${item.status === "Registrado" ? `<button class="button secondary" data-action="cancel-shipment" data-id="${esc(item.id)}">Cancelar envío</button>` : ""}${next ? `<button class="button" data-action="advance" data-id="${esc(item.id)}" data-status="${next}">${({ "En tránsito": "Despachar envío", "En destino": "Confirmar llegada", Entregado: "Confirmar entrega" })[next]}</button>` : ""}</div>` : '<p class="notice">El envío está disponible para consulta. El personal autorizado gestiona su recorrido.</p>'}</div>`;
 }
 
 function incidentList() {
-  const items = store.data.incidents;
-  return heading("Incidencias", "Registra novedades y resuélvelas antes de completar una entrega.", '<button class="button" data-action="new-incident">＋ Reportar incidencia</button>') +
-    `<section class="panel">${items.length ? `<div class="table-wrap"><table><thead><tr><th>Encomienda</th><th>Descripción</th><th>Severidad</th><th>Estado</th><th>Acción</th></tr></thead><tbody>${items.map(i => `<tr><td><button class="table-button" data-action="detail" data-id="${esc(i.shipment_id)}">${esc(i.shipment_id)}</button><small>${date(i.created_at)}</small></td><td>${esc(i.description)}</td><td><span class="badge ${["Alta", "Crítica"].includes(i.severity) ? "critical" : "registered"}">${esc(i.severity)}</span></td><td>${badge(i.status)}</td><td>${i.status === "Abierta" && store.own(store.data.shipments.find(s => s.id === i.shipment_id)) ? `<button class="button small secondary" data-action="resolve" data-id="${i.id}">Resolver</button>` : "—"}</td></tr>`).join("")}</tbody></table></div>` : empty("Sin incidencias", "Los reportes de tus envíos aparecerán aquí.")}</section>`;
+  const ownedIds = new Set(store.data.shipments.filter(s => store.own(s)).map(s => s.id));
+  const items = store.data.incidents.filter(i => ownedIds.has(i.shipment_id));
+  return heading("Incidencias", client() ? "Consulta las novedades asociadas a tus envíos." : "Registra novedades y resuélvelas antes de completar una entrega.", client() ? "" : '<button class="button" data-action="new-incident">＋ Reportar incidencia</button>') +
+    `<section class="panel">${items.length ? `<div class="table-wrap"><table><thead><tr><th>Encomienda</th><th>Descripción</th><th>Severidad</th><th>Estado</th><th>Acción</th></tr></thead><tbody>${items.map(i => `<tr><td><button class="table-button" data-action="detail" data-id="${esc(i.shipment_id)}">${esc(i.shipment_id)}</button><small>${date(i.created_at)}</small></td><td>${esc(i.description)}</td><td><span class="badge ${["Alta", "Crítica"].includes(i.severity) ? "critical" : "registered"}">${esc(i.severity)}</span></td><td>${badge(i.status)}</td><td>${i.status === "Abierta" && store.canOperateShipment(store.data.shipments.find(s => s.id === i.shipment_id)) ? `<button class="button small secondary" data-action="resolve" data-id="${i.id}">Resolver</button>` : "—"}</td></tr>`).join("")}</tbody></table></div>` : empty("Sin incidencias", "Los reportes de tus envíos aparecerán aquí.")}</section>`;
 }
 
 function catalogView() {
@@ -112,7 +117,7 @@ function catalogView() {
   const subtitle = { branches: "Los puntos de recepción y entrega de la agencia.", companies: "Empresas que realizan envíos con la agencia.", vehicles: "Vehículos disponibles para asignar a una encomienda.", employees: "Personal y asignación de sucursales." }[kind];
   const controls = manager() ? '<button class="button" data-action="new-catalog">＋ Agregar registro</button>' : "";
   const buttons = item => manager() ? `<div class="row-actions"><button class="icon-button" data-action="edit-catalog" data-id="${item.id}" aria-label="Editar ${esc(item.name || item.plate)}">✎</button><button class="icon-button" data-action="delete-catalog" data-id="${item.id}" aria-label="Eliminar ${esc(item.name || item.plate)}">✕</button></div>` : "";
-  if (kind === "branches") return heading(labels[view], subtitle, controls) + `<div class="cards-grid">${items.map(b => `<article class="branch-card"><span class="city-symbol" aria-hidden="true">⌂</span><h2>${esc(b.city)}</h2><p>${esc(b.name)}<br>${esc(b.address)}</p><footer><span>${store.data.shipments.filter(s => s.origin === b.id).length} envíos de origen</span>${buttons(b)}</footer></article>`).join("")}</div>`;
+  if (kind === "branches") return heading(labels[view], subtitle, controls) + `<div class="cards-grid">${items.map(b => `<article class="branch-card"><span class="city-symbol" aria-hidden="true">⌂</span><h2>${esc(b.city)}</h2><p>${esc(b.name)}<br>${esc(b.address)}</p><footer><span>${store.data.shipments.filter(s => store.own(s) && s.origin === b.id).length} envíos de origen</span>${buttons(b)}</footer></article>`).join("")}</div>`;
   const headers = kind === "companies" ? ["Empresa", "NIT", "Teléfono"] : kind === "vehicles" ? ["Placa", "Tipo", "Capacidad"] : ["Nombre", "Cargo", "Sucursal", ...(manager() ? ["Salario"] : [])];
   return heading(labels[view], subtitle, controls) + `<section class="panel">${items.length ? `<div class="table-wrap"><table><thead><tr>${[...headers, "Gestión"].map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${items.map(item => {
     const values = kind === "companies" ? [item.name, item.nit, item.phone] : kind === "vehicles" ? [item.plate, item.type, `${item.capacity} kg`] : [item.name, item.position, city(item.branch_id), ...(manager() ? [money(item.salary_cents)] : [])];
@@ -126,13 +131,30 @@ function auditView() {
     `<section class="panel">${store.data.audit.length ? `<div class="table-wrap"><table><thead><tr><th>Fecha · Bolivia</th><th>Usuario</th><th>Operación</th><th>Registro</th><th>Detalle</th></tr></thead><tbody>${store.data.audit.map(e => `<tr><td>${dateTime(e.created_at)}</td><td>${esc(e.actor)}</td><td>${esc(e.action)}</td><td>${esc(e.target)}</td><td>${esc(e.details)}</td></tr>`).join("")}</tbody></table></div>` : empty("Sin operaciones registradas")}</section>`;
 }
 
+const roleName = role => ({ administrador: "Administrador", gerente: "Gerencia", operador: "Operador", cliente: "Cliente" })[role] || role;
+
+function usersView(users) {
+  if (!administrator()) return empty("Acceso reservado a Administración", "Solo una cuenta Administrador puede gestionar usuarios y roles.");
+  const demoNote = store.mode === "demo" ? '<p class="notice">Demostración local: estos perfiles viven solo en este navegador. Para crear cuentas con acceso real usa el backend Python.</p>' : '<p class="notice">Las contraseñas se guardan como hashes. El alta pública crea siempre cuentas Cliente; aquí Administración asigna los demás roles.</p>';
+  const roleOptions = [["administrador", "Administrador"], ["gerente", "Gerencia"], ["operador", "Operador"], ["cliente", "Cliente"]];
+  return heading("Usuarios y permisos", "Administra las cuentas que pueden acceder al sistema.") + demoNote +
+    `<section class="panel"><div class="panel-heading"><h2>Crear una cuenta</h2></div><div class="panel-body"><form id="user-form"><div class="form-grid">${field("username", "Usuario", { attrs: 'autocomplete="off"', limit: 60 })}${field("display_name", "Nombre", { limit: 150 })}${field("email", "Correo electrónico", { type: "email", optional: true, limit: 254 })}${field("phone", "Teléfono", { type: "tel", optional: true, limit: 40 })}${selectField("role", "Rol", roleOptions, "cliente")}${store.mode === "server" ? field("password", "Contraseña inicial", { type: "password", attrs: 'autocomplete="new-password" minlength="12"', limit: 256, hint: "Mínimo 12 caracteres. No compartas contraseñas por este panel después de crear la cuenta." }) : '<p class="small-copy">La demo no usa ni guarda contraseñas.</p>'}</div><div class="form-error" role="alert" hidden></div><div class="form-actions"><button class="button" type="submit">Crear cuenta</button></div></form></div></section>` +
+    `<section class="panel"><div class="panel-heading"><h2>Cuentas registradas</h2><small>${users.length} cuenta${users.length === 1 ? "" : "s"}</small></div>${users.length ? `<div class="table-wrap"><table><thead><tr><th>Usuario</th><th>Contacto</th><th>Rol</th><th>Acceso</th></tr></thead><tbody>${users.map(user => `<tr><td><strong>${esc(user.display_name || user.username)}</strong><small>${esc(user.username)}</small></td><td>${esc(user.email || "Sin correo")}<small>${esc(user.phone || "")}</small></td><td><select class="user-role" data-id="${user.id}" aria-label="Rol de ${esc(user.username)}" ${user.id === store.user.id ? "disabled" : ""}>${roleOptions.map(([value, label]) => `<option value="${value}" ${user.role === value ? "selected" : ""}>${label}</option>`).join("")}</select></td><td><button class="button small ${user.is_active ? "secondary" : ""}" data-action="user-toggle" data-id="${user.id}" data-active="${user.is_active ? "true" : "false"}" ${user.id === store.user.id ? "disabled" : ""}>${user.is_active ? "Activa · Desactivar" : "Inactiva · Activar"}</button></td></tr>`).join("")}</tbody></table></div>` : empty("Sin cuentas")}</section>`;
+}
+
 function render() {
   if (disposeMap) { disposeMap(); disposeMap = null; }
   $("#session-username").textContent = store.user?.username || "Sin sesión";
-  $("#userrole").textContent = manager() ? "Gerencia" : store.user ? "Operador" : "Acceso al sistema";
+  $("#userrole").textContent = store.user ? roleName(store.user.role) : "Acceso al sistema";
   $("#audit-nav").hidden = !manager();
+  $("#users-nav").hidden = !administrator();
+  for (const name of ["empresas", "flota", "personal", "mapa"]) document.querySelector(`[data-view="${name}"]`).hidden = client();
   if (!store.user) { loginView(); return; }
   view = location.hash.slice(1) in labels ? location.hash.slice(1) : "resumen";
+  if ((view === "usuarios" && !administrator()) || (client() && ["mapa", "empresas", "flota", "personal", "auditoria"].includes(view))) {
+    location.hash = "#resumen";
+    view = "resumen";
+  }
   $("#breadcrumb").textContent = labels[view];
   document.title = `${labels[view]} · Copacabana`;
   document.querySelectorAll("[data-view]").forEach(a => {
@@ -140,23 +162,24 @@ function render() {
     if (a.dataset.view === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
   });
   if (view === "mapa") { disposeMap = mountLiveMap(store, $("#contenido"), toast); return; }
-  $("#contenido").innerHTML = view === "resumen" ? summary() : view === "encomiendas" ? shipmentList() : view === "seguimiento" ? tracking() : view === "incidencias" ? incidentList() : view === "auditoria" ? auditView() : catalogView();
+  $("#contenido").innerHTML = view === "resumen" ? summary() : view === "encomiendas" ? shipmentList() : view === "seguimiento" ? tracking() : view === "incidencias" ? incidentList() : view === "auditoria" ? auditView() : view === "usuarios" ? empty("Cargando cuentas…") : catalogView();
   if (view === "encomiendas") updateList();
+  if (view === "usuarios") store.listUsers().then(users => { if (view === "usuarios" && administrator()) $("#contenido").innerHTML = usersView(users); }).catch(error => toast(error.message, true));
 }
 
 function newShipment() {
   const branches = store.data.branches.map(b => [b.id, b.city]);
-  modal("Nueva encomienda", `<form id="shipment-form">
+  const assignments = client() ? "" : `${selectField("vehicle_id", "Vehículo", store.data.vehicles.map(v => [v.id, `${v.plate} · ${v.capacity} kg`]), "", true)}${selectField("company_id", "Empresa (opcional)", store.data.companies.map(c => [c.id, c.name]), "", true)}`;
+  const people = client()
+    ? `<fieldset class="form-section"><legend>Destinatario</legend><div class="form-grid">${field("recipient", "Nombre del destinatario")}</div></fieldset><p class="notice">La solicitud se vinculará a tu cuenta. La agencia completará las asignaciones operativas.</p>`
+    : `<fieldset class="form-section"><legend>Personas del envío</legend><div class="form-grid">${field("sender", "Nombre del remitente")}${field("recipient", "Nombre del destinatario")}${field("sender_ci", "Documento del remitente", { limit: 30 })}${field("recipient_ci", "Documento del destinatario", { limit: 30 })}</div></fieldset>`;
+  modal(client() ? "Solicitar encomienda" : "Nueva encomienda", `<form id="shipment-form">
     <fieldset class="form-section"><legend>Ruta y contenido</legend><div class="form-grid">
     ${selectField("origin", "Sucursal de origen", branches)}${selectField("destination", "Sucursal de destino", branches)}
     ${field("description", "Descripción del contenido", { full: true, limit: 500 })}
     ${field("weight", "Peso en kg", { type: "number", attrs: 'min="0.01" max="10000" step="0.01"', value: 1 })}
-    ${selectField("vehicle_id", "Vehículo", store.data.vehicles.map(v => [v.id, `${v.plate} · ${v.capacity} kg`]), "", true)}
-    ${selectField("company_id", "Empresa (opcional)", store.data.companies.map(c => [c.id, c.name]), "", true)}
-    </div></fieldset><fieldset class="form-section"><legend>Personas del envío</legend><div class="form-grid">
-    ${field("sender", "Nombre del remitente")}${field("recipient", "Nombre del destinatario")}
-    ${field("sender_ci", "Documento del remitente", { limit: 30 })}${field("recipient_ci", "Documento del destinatario", { limit: 30 })}
-    </div></fieldset>
+    ${assignments}
+    </div></fieldset>${people}
     ${store.mode === "demo" ? '<p class="notice">Usa datos ficticios. En esta demostración los documentos no se guardan.</p>' : '<p class="notice">Los documentos se guardan cifrados y no aparecen en los listados.</p>'}
     <div class="quote-line"><div>Tarifa referencial<small class="muted"><br>Bs 15 base + Bs 4 por kg · Propuesta académica</small></div><strong id="quote">${money(1900)}</strong></div>
     ${actions("Registrar encomienda")}</form>`);
@@ -180,7 +203,12 @@ function catalogForm(id) {
 }
 
 function loginView() {
-  $("#contenido").innerHTML = `<section class="login-panel"><span class="section-kicker">Centro de operaciones</span><h1>Bienvenido de nuevo.</h1><p>Ingresa con tu cuenta de la agencia.</p><form id="login-form">${field("username", "Usuario", { attrs: 'autocomplete="username"', limit: 60 })}${field("password", "Contraseña", { type: "password", attrs: 'autocomplete="current-password"', limit: 256 })}<div class="form-error" role="alert" hidden></div><button class="button" type="submit">Iniciar sesión</button></form></section>`;
+  $("#contenido").innerHTML = `<section class="login-panel"><span class="section-kicker">Centro de operaciones</span><h1>Bienvenido de nuevo.</h1><p>Ingresa con tu cuenta de la agencia.</p><form id="login-form">${field("username", "Usuario", { attrs: 'autocomplete="username"', limit: 60 })}${field("password", "Contraseña", { type: "password", attrs: 'autocomplete="current-password"', limit: 256 })}<div class="form-error" role="alert" hidden></div><button class="button" type="submit">Iniciar sesión</button></form><p class="small-copy">¿Eres cliente nuevo? <button class="text-link" type="button" data-action="register-client">Crear cuenta de Cliente</button></p></section>`;
+}
+
+function registrationForm() {
+  const demo = store.mode === "demo";
+  modal("Registro de Cliente", `<p class="small-copy">${demo ? "Perfil de prueba guardado solo en este navegador. No crea una cuenta real." : "El registro público crea una cuenta con permisos de Cliente. Administración asigna otros roles desde el panel."}</p><form id="register-form"><div class="form-grid">${field("display_name", "Nombre completo", { limit: 150 })}${field("username", "Usuario", { attrs: 'autocomplete="username"', limit: 60 })}${field("email", "Correo electrónico", { type: "email", attrs: 'autocomplete="email"', limit: 254 })}${field("phone", "Teléfono", { type: "tel", attrs: 'autocomplete="tel"', limit: 40 })}${demo ? "" : field("password", "Contraseña", { type: "password", attrs: 'autocomplete="new-password" minlength="12"', limit: 256, hint: "Usa al menos 12 caracteres." })}</div>${actions(demo ? "Crear perfil de prueba" : "Crear cuenta")}</form>`);
 }
 
 function exportCsv() {
@@ -214,6 +242,12 @@ document.addEventListener("click", async event => {
       $("#modal").close(); render(); toast("Estado actualizado.");
     }
     if (action === "new-incident") incidentForm();
+    if (action === "register-client") { if ($("#modal").open) $("#modal").close(); registrationForm(); }
+    if (action === "user-toggle") {
+      const active = button.dataset.active !== "true";
+      await store.updateUser(Number(id), { is_active: active });
+      render(); toast(active ? "Cuenta activada." : "Cuenta desactivada.");
+    }
     if (action === "resolve") {
       if (!confirm("¿Confirmar que esta incidencia fue resuelta?")) return;
       button.disabled = true;
@@ -237,7 +271,7 @@ document.addEventListener("click", async event => {
 
 document.addEventListener("submit", async event => {
   const form = event.target;
-  if (!["shipment-form", "incident-form", "catalog-form", "tracking-form", "login-form"].includes(form.id)) return;
+  if (!["shipment-form", "incident-form", "catalog-form", "tracking-form", "login-form", "register-form", "user-form"].includes(form.id)) return;
   event.preventDefault();
   const data = Object.fromEntries(new FormData(form));
   const submit = form.querySelector('button[type="submit"],button:not([type])');
@@ -246,6 +280,7 @@ document.addEventListener("submit", async event => {
   if (errorBox) errorBox.hidden = true;
   try {
     if (form.id === "shipment-form") {
+      if (client()) Object.assign(data, { sender: store.user.display_name, sender_ci: "No declarado", recipient_ci: "No declarado", vehicle_id: "", company_id: "" });
       const result = await store.createShipment(data);
       $("#modal").close(); render(); toast(`Encomienda ${result.id} registrada.`);
     }
@@ -260,10 +295,20 @@ document.addEventListener("submit", async event => {
       $("#modal").close(); render(); toast("Registro guardado.");
     }
     if (form.id === "tracking-form") {
-      const item = store.data.shipments.find(s => s.id.toUpperCase() === data.code.trim().toUpperCase());
+      const item = store.data.shipments.find(s => store.own(s) && s.id.toUpperCase() === data.code.trim().toUpperCase());
       $("#tracking-result").innerHTML = item ? shipmentDetail(item) : empty("No encontramos ese código", "Revisa el código completo o consulta la sección Encomiendas.");
     }
     if (form.id === "login-form") { await store.login(data.username, data.password); render(); }
+    if (form.id === "register-form") {
+      await store.registerClient(data);
+      $("#modal").close();
+      if (store.mode === "demo") render();
+      toast(store.mode === "demo" ? "Perfil de prueba creado en este navegador." : "Cuenta creada. Ya puedes iniciar sesión.");
+    }
+    if (form.id === "user-form") {
+      await store.createUser(data);
+      render(); toast(store.mode === "demo" ? "Perfil de demostración creado." : "Cuenta creada.");
+    }
   } catch (error) {
     if (errorBox) { errorBox.textContent = error.message; errorBox.hidden = false; }
     else toast(error.message, true);
@@ -276,10 +321,14 @@ document.addEventListener("input", event => {
 });
 document.addEventListener("change", event => {
   if (event.target.id === "status-filter") { statusFilter = event.target.value; updateList(); }
+  if (event.target.matches(".user-role")) {
+    const select = event.target;
+    store.updateUser(Number(select.dataset.id), { role: select.value }).then(() => { render(); toast("Rol actualizado."); }).catch(error => { toast(error.message, true); render(); });
+  }
 });
 $("#close-modal").addEventListener("click", () => $("#modal").close());
 $("#session-action").addEventListener("click", async () => {
-  if (store.mode === "demo") modal("Explorar roles", `<p>En la demo puedes probar los permisos de cada perfil. Este selector no es un inicio de sesión.</p><div class="switch-role"><button class="button" data-action="role" data-role="gerente">Gerencia</button><button class="button secondary" data-action="role" data-role="operador">Operador</button></div>`);
+  if (store.mode === "demo") modal("Explorar roles", `<p>En la demo puedes probar los permisos de cada perfil. Este selector no es un inicio de sesión.</p><div class="switch-role"><button class="button" data-action="role" data-role="administrador">Administrador</button><button class="button secondary" data-action="role" data-role="gerente">Gerencia</button><button class="button secondary" data-action="role" data-role="operador">Operador</button><button class="button secondary" data-action="role" data-role="cliente">Cliente</button><button class="text-link" data-action="register-client">Crear perfil de Cliente</button></div>`);
   else if (store.user) {
     try { await store.logout(); render(); } catch (error) { toast(error.message, true); }
   }

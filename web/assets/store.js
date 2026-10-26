@@ -5,6 +5,8 @@ export const money = cents => new Intl.NumberFormat("es-BO", { style: "currency"
 export const quote = weight => Math.round((15 + Number(weight) * 4 + Number.EPSILON) * 100);
 const KEY = "copacabana-demo-v1";
 const ROLE_KEY = "copacabana-role-v1";
+const GPS_KEY = "copacabana-demo-gps-v1";
+const USERS_KEY = "copacabana-demo-users-v1";
 const timestamp = () => new Date().toISOString();
 
 export function validateShipment(data, catalogs) {
@@ -49,8 +51,10 @@ export class Store {
       this.csrf = session.csrf_token;
       if (this.user) await this.refresh();
     } else {
-      const role = localStorage.getItem(ROLE_KEY) === "operador" ? "operador" : "gerente";
-      this.user = { username: role === "gerente" ? "Gerencia demo" : "Operador demo", role };
+      const savedRole = localStorage.getItem(ROLE_KEY);
+      const role = ["administrador", "operador", "cliente"].includes(savedRole) ? savedRole : "gerente";
+      const profile = role === "cliente" ? JSON.parse(localStorage.getItem("copacabana-demo-client") || '{"username":"Cliente demo","display_name":"Cliente de demostración"}') : this.demoUsers().find(user => user.role === role);
+      this.user = profile ? { ...profile, role } : { username: "Gerencia demo", role };
       const stored = localStorage.getItem(KEY);
       if (stored) {
         try {
@@ -95,7 +99,71 @@ export class Store {
   }
   setRole(role) {
     localStorage.setItem(ROLE_KEY, role);
-    this.user = { username: role === "gerente" ? "Gerencia demo" : "Operador demo", role };
+    const profile = role === "cliente" ? JSON.parse(localStorage.getItem("copacabana-demo-client") || '{"username":"Cliente demo","display_name":"Cliente de demostración"}') : this.demoUsers().find(user => user.role === role);
+    this.user = profile ? { ...profile, role } : { username: "Usuario demo", role };
+  }
+  async registerClient(values) {
+    if (this.mode === "server") return this.request("/register-client", "POST", values);
+    const profile = { username: values.username.trim(), display_name: values.display_name.trim(), email: values.email.trim().toLowerCase(), phone: values.phone.trim(), role: "cliente", is_active: 1 };
+    const users = this.demoUsers();
+    if (users.some(user => user.username.toLowerCase() === profile.username.toLowerCase() || (profile.email && user.email?.toLowerCase() === profile.email)))
+      throw new Error("Ese nombre de usuario o correo ya está registrado en esta demostración.");
+    profile.id = Math.max(0, ...users.map(user => Number(user.id) || 0)) + 1;
+    localStorage.setItem(USERS_KEY, JSON.stringify([...users, profile]));
+    localStorage.setItem("copacabana-demo-client", JSON.stringify(profile));
+    this.setRole("cliente");
+    return { ok: true, demo: true };
+  }
+  demoUsers() {
+    try {
+      const users = JSON.parse(localStorage.getItem(USERS_KEY) || "null");
+      if (Array.isArray(users)) return users;
+    } catch { /* Recover with clearly labeled demo profiles. */ }
+    return [
+      { id: 1, username: "Administrador demo", display_name: "Administrador de demostración", email: "", phone: "", role: "administrador", is_active: 1 },
+      { id: 2, username: "Gerencia demo", display_name: "Gerencia de demostración", email: "", phone: "", role: "gerente", is_active: 1 },
+      { id: 3, username: "Operador demo", display_name: "Operador de demostración", email: "", phone: "", role: "operador", is_active: 1 }
+    ];
+  }
+  async listUsers() {
+    return this.mode === "server" ? (await this.request("/users")).users : this.demoUsers();
+  }
+  async createUser(values) {
+    if (this.mode === "server") return this.request("/users", "POST", values);
+    const users = this.demoUsers();
+    const user = { id: Math.max(0, ...users.map(row => Number(row.id) || 0)) + 1, username: values.username.trim(), display_name: values.display_name.trim(), email: values.email.trim().toLowerCase(), phone: values.phone.trim(), role: values.role, is_active: 1 };
+    if (users.some(row => row.username.toLowerCase() === user.username.toLowerCase() || (user.email && row.email?.toLowerCase() === user.email)))
+      throw new Error("Ese nombre de usuario o correo ya existe.");
+    localStorage.setItem(USERS_KEY, JSON.stringify([...users, user]));
+    return { id: user.id, demo: true };
+  }
+  async updateUser(id, changes) {
+    if (this.mode === "server") return this.request(`/users/${id}`, "PATCH", changes);
+    const users = this.demoUsers();
+    const target = users.find(user => Number(user.id) === Number(id));
+    if (!target) throw new Error("No se encontró la cuenta de demostración.");
+    if ((Number(id) === Number(this.user.id) || target.username === this.user.username) && changes.is_active === false) throw new Error("No puedes desactivar tu propia cuenta.");
+    const next = { ...target, ...changes, is_active: changes.is_active === undefined ? target.is_active : Number(changes.is_active) };
+    if (target.role === "administrador" && target.is_active && (next.role !== "administrador" || !next.is_active) &&
+        !users.some(user => Number(user.id) !== Number(id) && user.role === "administrador" && user.is_active))
+      throw new Error("Debe quedar al menos un administrador activo.");
+    localStorage.setItem(USERS_KEY, JSON.stringify(users.map(user => Number(user.id) === Number(id) ? next : user)));
+    return { ok: true, demo: true };
+  }
+  demoLocations() {
+    try { return JSON.parse(localStorage.getItem(GPS_KEY) || "[]"); }
+    catch { return []; }
+  }
+  saveDemoLocation(position) {
+    const locations = this.demoLocations().filter(item => item.vehicle_id !== position.vehicle_id);
+    locations.push({ ...position, source: "phone", source_id: "demo-local", source_label: this.user.username, active: 1 });
+    localStorage.setItem(GPS_KEY, JSON.stringify(locations));
+  }
+  stopDemoLocation(vehicleId) {
+    localStorage.setItem(GPS_KEY, JSON.stringify(this.demoLocations().map(item => item.vehicle_id === vehicleId ? { ...item, active: 0 } : item)));
+  }
+  deleteDemoLocation(vehicleId) {
+    localStorage.setItem(GPS_KEY, JSON.stringify(this.demoLocations().filter(item => item.vehicle_id !== vehicleId)));
   }
   async reset() {
     const response = await fetch("assets/seed.json");
@@ -127,7 +195,12 @@ export class Store {
     this.data.audit.unshift({ id: Date.now(), actor: this.user.username, action, target, details, created_at: timestamp() });
   }
   own(shipment) {
-    return this.user.role === "gerente" || shipment.created_by === this.user.username;
+    if (["gerente", "administrador"].includes(this.user.role)) return true;
+    if (this.user.role === "cliente") return shipment.client_user_id === this.user.id || shipment.created_by === this.user.username;
+    return shipment.created_by === this.user.username;
+  }
+  canOperateShipment(shipment) {
+    return this.user.role !== "cliente" && this.own(shipment);
   }
   async createShipment(payload) {
     validateShipment(payload, this.data);
@@ -150,7 +223,7 @@ export class Store {
   async transition(id, status) {
     return this.mutate(`/shipments/${id}/status`, "PATCH", { status }, () => {
       const item = this.data.shipments.find(s => s.id === id);
-      if (!item || !this.own(item)) throw new Error("Solo puedes modificar tus propios envíos.");
+      if (!item || !this.canOperateShipment(item)) throw new Error("Tu rol no puede cambiar el estado de este envío.");
       const allowed = nextStates(item, this.data.incidents);
       if (item.status === "Registrado") allowed.push("Cancelado");
       if (!allowed.includes(status)) throw new Error("Cambio de estado no permitido. Revisa las incidencias.");
@@ -162,7 +235,7 @@ export class Store {
   async addIncident(payload) {
     return this.mutate("/incidents", "POST", payload, () => {
       const shipment = this.data.shipments.find(s => s.id === payload.shipment_id);
-      if (!shipment || !this.own(shipment)) throw new Error("Selecciona uno de tus envíos.");
+      if (!shipment || !this.canOperateShipment(shipment)) throw new Error("Selecciona un envío que puedas operar.");
       if (["Entregado", "Cancelado"].includes(shipment.status)) throw new Error("El envío ya está cerrado.");
       if (!payload.description?.trim() || payload.description.length > 500) throw new Error("Describe la incidencia en hasta 500 caracteres.");
       if (!["Baja", "Media", "Alta", "Crítica"].includes(payload.severity)) throw new Error("Severidad inválida.");
@@ -177,14 +250,14 @@ export class Store {
       const incident = this.data.incidents.find(i => i.id === id);
       if (!incident || incident.status !== "Abierta") throw new Error("La incidencia no está abierta.");
       const shipment = this.data.shipments.find(s => s.id === incident.shipment_id);
-      if (!shipment || !this.own(shipment)) throw new Error("No tienes permiso para modificar este envío.");
+      if (!shipment || !this.canOperateShipment(shipment)) throw new Error("Tu rol no puede modificar este envío.");
       incident.status = "Resuelta";
       this.log("Incidencia resuelta", incident.shipment_id, `Incidencia ${id}`);
     });
   }
   async catalog(kind, id, payload, remove = false) {
     return this.mutate(`/catalog/${kind}${id ? `/${id}` : ""}`, remove ? "DELETE" : id ? "PATCH" : "POST", payload, () => {
-      if (this.user.role !== "gerente") throw new Error("Esta operación requiere gerencia.");
+      if (!["gerente", "administrador"].includes(this.user.role)) throw new Error("Esta operación requiere gerencia.");
       const list = this.data[kind];
       if (!["branches", "companies", "vehicles", "employees"].includes(kind)) throw new Error("Catálogo no válido.");
       if (remove) {

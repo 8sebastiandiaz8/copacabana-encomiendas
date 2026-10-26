@@ -7,6 +7,7 @@ Evolución del beta PHP/MySQL a **Python + Flask + SQLite**, con interfaz en
 - **Sitio:** https://8sebastiandiaz8.github.io/copacabana-encomiendas/
 - **Demostración:** https://8sebastiandiaz8.github.io/copacabana-encomiendas/sistema.html
 - **Estudio:** https://8sebastiandiaz8.github.io/copacabana-encomiendas/documentacion.html
+- **Guion de defensa:** [DEFENSA.md](DEFENSA.md)
 
 ## Qué puedes hacer
 
@@ -41,6 +42,7 @@ Requiere Python 3.12 o posterior. Desde esta carpeta, en PowerShell:
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m flask --app backend.app create-user --username administrador --role administrador
 .\.venv\Scripts\python.exe -m flask --app backend.app create-user --username gerente --role gerente
 .\.venv\Scripts\python.exe -m flask --app backend.app create-user --username operador --role operador
 .\.venv\Scripts\waitress-serve.exe --listen=127.0.0.1:8000 --call backend.app:create_app
@@ -75,13 +77,26 @@ Esta entrega publica la demo en Pages; no provisiona un servicio Python externo.
 
 ## Roles y reglas
 
-| Operación | Operador | Gerencia |
-|---|---|---|
-| Consultar envíos y catálogos | Sí | Sí |
-| Registrar envíos | Sí | Sí |
-| Cambiar estado / gestionar incidencias | Solo sus envíos | Todos |
-| Modificar catálogos | No | Sí |
-| Ver salarios y auditoría | No | Sí |
+| Operación | Cliente | Operador | Gerencia | Administrador |
+|---|---|---|---|---|
+| Registrarse y consultar sus envíos | Sí | — | — | — |
+| Crear encomiendas | Solicitudes propias | Sí | Sí | Sí |
+| Cambiar estados / resolver incidencias | No | Solo sus envíos | Todos | Todos |
+| Modificar sucursales, empresas, flota y personal | No | No | Sí | Sí |
+| Ver salarios y auditoría | No | No | Sí | Sí |
+| Crear cuentas, asignar roles y activar accesos | No | No | No | Sí |
+
+El registro público siempre crea un Cliente. Administración crea usuarios de
+personal, asigna cualquiera de los cuatro roles y activa o desactiva cuentas.
+El sistema conserva al menos un Administrador activo y no permite que una
+persona se desactive o cambie su propio rol desde su sesión. En el primer
+inicio, crea al administrador por el comando CLI indicado arriba; no hay una
+contraseña predeterminada.
+
+En GitHub Pages los cuatro perfiles solo sirven para explorar permisos. El
+formulario de Cliente guarda un perfil de prueba en ese navegador; no autentica
+ni comparte cuentas entre dispositivos. El registro real requiere la aplicación
+Python.
 
 Los documentos personales no se devuelven en la API de listados, ni siquiera a
 gerencia. Las contraseñas se almacenan como hashes. Las escrituras de sesión exigen token
@@ -174,6 +189,10 @@ En Python con HTTPS, entra a **Mapa y GPS**, selecciona vehículo y pulsa
 **Detener** corta la transmisión. El operador solo transmite para vehículos de
 sus envíos abiertos; gerencia puede gestionar todos. La captura en segundo plano
 o con el teléfono bloqueado depende del navegador y no está garantizada.
+
+En la demo de Pages se puede seleccionar vehículo y probar la captura GPS del
+navegador. La última lectura queda solo en el almacenamiento local de ese
+navegador; no se transmite a la agencia ni a otros teléfonos.
 
 Para dispositivos, gerencia abre **Gestionar dispositivos** y crea una clave por
 vehículo. Copia la clave en ese momento: solo se guarda su hash y no se recupera.
