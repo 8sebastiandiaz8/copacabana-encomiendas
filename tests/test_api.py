@@ -25,19 +25,21 @@ def app(tmp_path, password_hash):
     return application
 
 
-def login(app, username="manager"):
+def login(app, username="manager", password="test-password-123"):
     client = app.test_client()
     csrf = client.get("/api/session").json["csrf_token"]
-    response = client.post("/api/login", json={"username": username, "password": "test-password-123"},
+    response = client.post("/api/login", json={"username": username, "password": password},
                            headers={"X-CSRF-Token": csrf})
     assert response.status_code == 200
     return client, {"X-CSRF-Token": response.json["csrf_token"]}
 
 
 def payload(**changes):
-    return dict(origin=1, destination=2, sender="Persona de prueba", recipient="Receptor de prueba",
+    data = dict(origin=1, destination=2, sender="Persona de prueba", recipient="Receptor de prueba",
                 sender_ci="PRUEBA-1234", recipient_ci="PRUEBA-5678", description="Libros",
-                weight="2.50", vehicle_id=1, **changes)
+                weight="2.50", vehicle_id=1)
+    data.update(changes)
+    return data
 
 
 def register(client, headers):
@@ -171,3 +173,107 @@ def test_empty_catalog_is_not_reseeded_on_restart(app):
     create_app(dict(app.config))
     with sqlite3.connect(app.config["DATABASE"]) as connection:
         assert connection.execute("SELECT count(*) FROM branches").fetchone()[0] == 0
+
+
+def test_public_registration_always_creates_customer_and_isolates_its_shipments(app):
+    manager, manager_headers = login(app)
+    agency_code = register(manager, manager_headers)
+
+    guest = app.test_client()
+    csrf = guest.get("/api/session").json["csrf_token"]
+    registration = {
+        "username": "new-customer", "display_name": "Cliente de prueba",
+        "email": "customer@example.test", "phone": "70000000",
+        "password": "customer-password-123", "role": "administrador",
+    }
+    assert guest.post("/api/register-client", json={**registration, "password": "short"},
+                      headers={"X-CSRF-Token": csrf}).status_code == 400
+    response = guest.post("/api/register-client", json=registration, headers={"X-CSRF-Token": csrf})
+    assert response.status_code == 201, response.json
+    assert guest.post("/api/register-client", json=registration, headers={"X-CSRF-Token": csrf}).status_code == 409
+
+    customer, customer_headers = login(app, "new-customer", "customer-password-123")
+    assert customer.get("/api/session").json["user"]["role"] == "cliente"
+    assert customer.get("/api/users").status_code == 403
+    customer_data = customer.get("/api/data").json
+    assert customer_data["shipments"] == []
+    assert customer_data["companies"] == []
+    assert customer_data["vehicles"] == []
+    assert customer_data["employees"] == []
+
+    request_data = payload(sender="Forged sender", sender_ci="FORGED-CI", vehicle_id=1, company_id=1)
+    request_data["recipient_ci"] = "FORGED-RECIPIENT-CI"
+    created = customer.post("/api/shipments", json=request_data, headers=customer_headers)
+    assert created.status_code == 201, created.json
+    customer_code = created.json["id"]
+    own_data = customer.get("/api/data").json
+    assert [shipment["id"] for shipment in own_data["shipments"]] == [customer_code]
+    assert own_data["shipments"][0]["sender"] == "Cliente de prueba"
+    assert own_data["shipments"][0]["vehicle_id"] is None
+    assert own_data["shipments"][0]["company_id"] is None
+    assert customer.patch(f"/api/shipments/{customer_code}/status", json={"status": "En tránsito"},
+                          headers=customer_headers).status_code == 403
+    assert customer.post("/api/incidents", json={"shipment_id": customer_code, "description": "Prueba", "severity": "Baja"},
+                         headers=customer_headers).status_code == 403
+    location = {"latitude": -16.5, "longitude": -68.15, "accuracy": 10,
+                "captured_at": "2026-10-26T12:00:00Z"}
+    assert customer.post("/api/vehicles/1/location", json=location, headers=customer_headers).status_code == 403
+
+    manager_data = manager.get("/api/data").json
+    assert {shipment["id"] for shipment in manager_data["shipments"]} == {agency_code, customer_code}
+    with sqlite3.connect(app.config["DATABASE"]) as connection:
+        row = connection.execute("SELECT sender_ci,recipient_ci,vehicle_id,company_id,client_user_id FROM shipments WHERE id=?",
+                                 (customer_code,)).fetchone()
+        account_id = connection.execute("SELECT id FROM users WHERE username='new-customer'").fetchone()[0]
+        assert row[0] != "FORGED-CI" and row[1] != "FORGED-RECIPIENT-CI"
+        assert row[2] is None and row[3] is None and row[4] == account_id
+
+
+def test_administrator_manages_roles_and_cannot_remove_last_admin(app, password_hash):
+    with sqlite3.connect(app.config["DATABASE"]) as connection:
+        connection.execute("INSERT INTO users(username,password_hash,role) VALUES(?,?,?)",
+                           ("admin", password_hash, "administrador"))
+
+    manager, manager_headers = login(app, "manager")
+    operator, operator_headers = login(app, "operator")
+    assert manager.get("/api/users").status_code == 403
+    assert operator.get("/api/users").status_code == 403
+
+    admin, admin_headers = login(app, "admin")
+    listed = admin.get("/api/users")
+    assert listed.status_code == 200
+    assert all("password_hash" not in user for user in listed.json["users"])
+    admin_id = next(user["id"] for user in listed.json["users"] if user["username"] == "admin")
+
+    created = admin.post("/api/users", json={
+        "username": "new-operator", "display_name": "Nuevo operador", "role": "operador",
+        "email": "operator@example.test", "phone": "70000001", "password": "operator-password-123",
+    }, headers=admin_headers)
+    assert created.status_code == 201, created.json
+    operator_id = created.json["id"]
+    assert admin.patch(f"/api/users/{operator_id}", json={"role": "gerente"}, headers=admin_headers).status_code == 200
+    roles = {user["username"]: user["role"] for user in admin.get("/api/users").json["users"]}
+    assert roles["new-operator"] == "gerente"
+    assert admin.patch(f"/api/users/{operator_id}", json={"is_active": False}, headers=admin_headers).status_code == 200
+    login_attempt = app.test_client()
+    csrf = login_attempt.get("/api/session").json["csrf_token"]
+    assert login_attempt.post("/api/login", json={"username": "new-operator", "password": "operator-password-123"},
+                              headers={"X-CSRF-Token": csrf}).status_code == 401
+
+    assert admin.patch(f"/api/users/{admin_id}", json={"role": "gerente"}, headers=admin_headers).status_code == 400
+    assert admin.patch(f"/api/users/{admin_id}", json={"is_active": False}, headers=admin_headers).status_code == 400
+    second_admin = admin.post("/api/users", json={
+        "username": "second-admin", "display_name": "Segundo administrador", "role": "administrador",
+        "password": "second-admin-password-123",
+    }, headers=admin_headers)
+    assert second_admin.status_code == 201, second_admin.json
+
+    second, second_headers = login(app, "second-admin", "second-admin-password-123")
+    assert second.patch(f"/api/users/{admin_id}", json={"is_active": False}, headers=second_headers).status_code == 200
+    final_admin = app.test_client()
+    final_csrf = final_admin.get("/api/session").json["csrf_token"]
+    assert final_admin.post("/api/login", json={"username": "admin", "password": "test-password-123"},
+                            headers={"X-CSRF-Token": final_csrf}).status_code == 401
+    second_id = second.get("/api/session").json["user"]["id"]
+    assert second.patch(f"/api/users/{second_id}", json={"is_active": False}, headers=second_headers).status_code == 400
+    assert second.patch(f"/api/users/{second_id}", json={"role": "gerente"}, headers=second_headers).status_code == 400
