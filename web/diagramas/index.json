@@ -17,12 +17,12 @@
   {
     "slug": "04-casos-uso",
     "name": "Casos de uso",
-    "caption": "El Cliente consulta sus envíos, el Operador gestiona los propios y Administración administra permisos."
+    "caption": "Cuatro actores y ocho casos de uso, con las relaciones de inclusión y extensión y las reglas de acceso."
   },
   {
     "slug": "05-clases",
-    "name": "Modelo de clases",
-    "caption": "Modelo conceptual del núcleo y la telemetría. Las entidades se persisten como registros SQLite."
+    "name": "Modelo de clases del dominio",
+    "caption": "Once clases en tres capas: catálogos, operación y auditoría, con atributos, operaciones y multiplicidades."
   },
   {
     "slug": "06-secuencia",

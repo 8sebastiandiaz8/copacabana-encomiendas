@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 430" width="1000" height="430" role="img" aria-label="Fuentes del estudio agrupadas por tipo">
+<rect width="1000" height="430" fill="#ffffff"/>
+<text x="40" y="54" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="25" font-weight="650" letter-spacing="0" fill="#102c50">Referencias y procedencia</text>
+<text x="40" y="80" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="400" letter-spacing="0" fill="#5c728a">De dónde salen los datos, las normas y las herramientas del estudio.</text>
+<path d="M40 102 L960 102" stroke="#e6eef7" stroke-width="1.4"/>
+<rect x="40" y="126" width="290" height="218" rx="14" fill="#ffffff" stroke="#cfdcea" stroke-width="1.4"/>
+<rect x="40" y="126" width="290" height="44" rx="14" fill="#eef3fa" stroke="#eef3fa" stroke-width="1.4"/>
+<path d="M40 170 h290" stroke="#cfdcea" stroke-width="1.2"/>
+<text x="62" y="154" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="0" fill="#163f75">Documento base</text>
+<circle cx="70" cy="201" r="4" fill="#163f75"/>
+<text x="86" y="205" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="500" letter-spacing="0" fill="#334a63">Guía del proyecto</text>
+<circle cx="70" cy="243" r="4" fill="#163f75"/>
+<text x="86" y="247" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="500" letter-spacing="0" fill="#334a63">Beta del sistema</text>
+<circle cx="70" cy="285" r="4" fill="#163f75"/>
+<text x="86" y="289" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="500" letter-spacing="0" fill="#334a63">Entrevistas y observación</text>
+<rect x="350" y="126" width="290" height="218" rx="14" fill="#ffffff" stroke="#cfdcea" stroke-width="1.4"/>
+<rect x="350" y="126" width="290" height="44" rx="14" fill="#fff3ea" stroke="#fff3ea" stroke-width="1.4"/>
+<path d="M350 170 h290" stroke="#cfdcea" stroke-width="1.2"/>
+<text x="372" y="154" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="0" fill="#ed7138">Normas y notación</text>
+<circle cx="380" cy="201" r="4" fill="#ed7138"/>
+<text x="396" y="205" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="500" letter-spacing="0" fill="#334a63">OMG UML 2.5.1</text>
+<circle cx="380" cy="243" r="4" fill="#ed7138"/>
+<text x="396" y="247" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="500" letter-spacing="0" fill="#334a63">BPMN 2.0</text>
+<circle cx="380" cy="285" r="4" fill="#ed7138"/>
+<text x="396" y="289" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="500" letter-spacing="0" fill="#334a63">DFD (Yourdon)</text>
+<rect x="660" y="126" width="290" height="218" rx="14" fill="#ffffff" stroke="#cfdcea" stroke-width="1.4"/>
+<rect x="660" y="126" width="290" height="44" rx="14" fill="#eef7f2" stroke="#eef7f2" stroke-width="1.4"/>
+<path d="M660 170 h290" stroke="#cfdcea" stroke-width="1.2"/>
+<text x="682" y="154" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="0" fill="#21745b">Herramientas</text>
+<circle cx="690" cy="201" r="4" fill="#21745b"/>
+<text x="706" y="205" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="500" letter-spacing="0" fill="#334a63">Flask y SQLite</text>
+<circle cx="690" cy="243" r="4" fill="#21745b"/>
+<text x="706" y="247" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="500" letter-spacing="0" fill="#334a63">Cifrado Fernet</text>
+<circle cx="690" cy="285" r="4" fill="#21745b"/>
+<text x="706" y="289" text-anchor="start" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="500" letter-spacing="0" fill="#334a63">GitHub Pages</text>
+<text x="500" y="386" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="400" letter-spacing="0" fill="#5c728a">Cada afirmación del estudio se apoya en el documento base y en la norma que la define.</text>
+</svg>

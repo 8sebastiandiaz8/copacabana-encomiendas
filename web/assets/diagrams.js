@@ -10,7 +10,7 @@ try {
     select.value = item.slug;
     document.querySelector('#diagram-name').textContent = item.name;
     document.querySelector('#diagram-caption').textContent = item.caption;
-    img.src = 'diagramas/' + item.slug + '.svg'; img.alt = item.name;
+    img.src = 'diagramas/' + item.slug + '.svg?v=20261117b'; img.alt = item.name;
     document.querySelector('#download-scene').href = 'diagramas/' + item.slug + '.excalidraw';
     document.querySelector('#download-svg').href = img.src;
     history.replaceState(null, '', '?id=' + encodeURIComponent(item.slug));
